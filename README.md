@@ -20,7 +20,10 @@ this should output your current branch for git - if this is not your branch, swi
 
 11.'git status' -- if everything is up to date this will let you know, if there are more issues reach our to Mr. Carlin or Mr. Monari
 
+
+
 Git Commands
+
 
 
 Pull request - click "new pull requests"
