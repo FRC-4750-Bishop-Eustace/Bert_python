@@ -70,6 +70,12 @@ class MyRobot(wpilib.TimedRobot):
         #self.rightStick = wpilib.Joystick(1)
         self.timer = wpilib.Timer()
 
+         ## SOLENOID TESTING
+        self.doubleSolenoid = wpilib.DoubleSolenoid(3,wpilib.PneumaticsModuleType.CTREPCM, 1,2)
+        kForward = 1
+        kOff = 0
+        kReverse = 2
+
     def teleopInit(self):
         """Executed at the start of teleop mode"""
         #self.myRobot.setSafetyEnabled(True)
@@ -82,9 +88,9 @@ class MyRobot(wpilib.TimedRobot):
         """Runs the motors with tank steering"""
         #self.myRobot.tankDrive(self.leftStick.getY() * -1, self.rightStick.getY() * -1)
         i = 0
-        if i==0:
-            print("In TeleopMode")
-            i=i+1
+        #if i==0:
+        #    print("In TeleopMode")
+        #    i=i+1
         #self.driveTrain.arcadeDrive(-0.5, 0)
         #print("Driving")
         #time.sleep(1)
@@ -93,9 +99,29 @@ class MyRobot(wpilib.TimedRobot):
         #self.myRobot.arcadeDrive(
         #    self.stick.getRawAxis(0), self.stick.getRawAxis(1), True
         #)
-        print(self.joystick.getY())
-        print(self.joystick.getX())
+        #print(self.joystick.getY())
+        #print(self.joystick.getX())
+        #print(self.joystick.getRawButtonPressed(1))
+        if self.joystick.getRawButtonPressed(1):
+            print("Button 1 Pressed")
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
+        if self.joystick.getRawButtonPressed(2):
+            print("Button 2 Pressed")
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kOff)
+        if self.joystick.getRawButtonPressed(3):
+            print("Button 3 Pressed")
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
+        if self.joystick.getRawButtonPressed(4):
+            print("Button 4 Pressed")
+            print("solenoid value = ",self.doubleSolenoid.get())
+        if self.joystick.getRawButtonPressed(5):
+            print("Button 5 Pressed")
+        if self.joystick.getRawButtonPressed(6):
+            print("Button 6 Pressed")
+        if self.joystick.getRawButtonPressed(7):
+            print("Button 7 Pressed")
         self.driveTrain.arcadeDrive(-self.joystick.getY(), self.joystick.getX())
+
     ''' TEST class MyRobot(wpilib.TimedRobot):
 
     def robotInit(self):
