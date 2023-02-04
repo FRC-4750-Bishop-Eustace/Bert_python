@@ -75,6 +75,17 @@ class MyRobot(wpilib.TimedRobot):
         kForward = 1
         kOff = 0
         kReverse = 2
+        
+        ## DEFINE COMPRESSOR
+        self.compressor = wpilib.Compressor(3,wpilib.PneumaticsModuleType.CTREPCM)
+        
+        ## ENCODER DEFINITION
+        #self.encoder = ctre.WPI_CANCoder(0, "rio")
+        #self.encoder.configMagnetOffset()
+        self.encoder = ctre.TalonSRXFeedbackDevice(0)
+        
+        ## DEFINE NAVX
+        #self.navx = AHRS.create_spi()
 
     def teleopInit(self):
         """Executed at the start of teleop mode"""
@@ -118,6 +129,7 @@ class MyRobot(wpilib.TimedRobot):
             print("Button 5 Pressed")
         if self.joystick.getRawButtonPressed(6):
             print("Button 6 Pressed")
+            self.compressor.disable()
         if self.joystick.getRawButtonPressed(7):
             print("Button 7 Pressed")
         self.driveTrain.arcadeDrive(-self.joystick.getY(), self.joystick.getX())
