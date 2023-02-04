@@ -6,6 +6,8 @@ import wpilib
 import wpilib.drive
 import ctre 
 
+#from networktables import Networktables
+
 # HARDWARE DEF
 
 #from wpilib.drive import DifferentialDrive
