@@ -5,8 +5,10 @@ import sys
 import wpilib
 import wpilib.drive
 import ctre 
+import navx
 
-#from networktables import Networktables
+import ntcore
+#from networktables import NetworkTables
 
 # HARDWARE DEF
 
@@ -82,12 +84,70 @@ class MyRobot(wpilib.TimedRobot):
         self.compressor = wpilib.Compressor(3,wpilib.PneumaticsModuleType.CTREPCM)
         
         ## ENCODER DEFINITION
-        #self.encoder = ctre.WPI_CANCoder(0, "rio")
-        #self.encoder.configMagnetOffset()
-        self.encoder = ctre.TalonSRXFeedbackDevice(0)
+        
+        # Encoder Testing
+        self.kTimeoutMs = 0
+        self.kPIDLoopIdx = 0
+        self.kSlotIdx = 0
+        #self.rearRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.PulseWidthEncodedPosition, 0, 0)
+        #self.rearRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.QuadEncoder, 0, 0)
+        #self.rearRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Relative, 0, 0)
+        #self.rearRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0)
+        self.frontLeftMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0,)
+        self.frontLeftMotor.setSensorPhase(True)
+        self.frontLeftMotor.setSelectedSensorPosition(100,0,0)
+        # Set relevant frame periods to be at least as fast as periodic rate
+        ##self.rearRightMotor.setStatusFramePeriod(ctre.WPI_TalonSRX.StatusFrameEnhanced.Status_13_Base_PIDF0, 10, 0)
+        ##self.rearRightMotor.setStatusFramePeriod(ctre.WPI_TalonSRX.StatusFrameEnhanced.Status_10_MotionMagic, 10, self.kTimeoutMs)
+
+        # set the peak and nominal outputs
+        self.frontLeftMotor.configNominalOutputForward(0, self.kTimeoutMs)
+        self.frontLeftMotor.configNominalOutputReverse(0, self.kTimeoutMs)
+        self.frontLeftMotor.configPeakOutputForward(1, self.kTimeoutMs)
+        self.frontLeftMotor.configPeakOutputReverse(-1, self.kTimeoutMs)
+
+        # set closed loop gains in slot0 - see documentation */
+        self.frontLeftMotor.selectProfileSlot(self.kSlotIdx, self.kPIDLoopIdx)
+        self.frontLeftMotor.config_kF(0, 0.2, self.kTimeoutMs)
+        self.frontLeftMotor.config_kP(0, 0.2, self.kTimeoutMs)
+        self.frontLeftMotor.config_kI(0, 0, self.kTimeoutMs)
+        self.frontLeftMotor.config_kD(0, 0, self.kTimeoutMs)
+        # set acceleration and vcruise velocity - see documentation
+        self.frontLeftMotor.configMotionCruiseVelocity(15000, self.kTimeoutMs)
+        self.frontLeftMotor.configMotionAcceleration(6000, self.kTimeoutMs)
+        # zero the sensor
+        self.frontLeftMotor.setSelectedSensorPosition(0, self.kPIDLoopIdx, self.kTimeoutMs)
+
+        
+        ## NETWORK TABLES
+        inst = ntcore.NetworkTableInstance.getDefault()
+        self.navxtable = inst.getTable("SmartDashboard")
+        self.lmtable = inst.getTable("limelight")
+        
         
         ## DEFINE NAVX
-        #self.navx = AHRS.create_spi()
+        self.navx = navx.AHRS.create_i2c()
+        
+        ## DEFINE LIMELIGHT
+        '''
+        table = NetworkTables.getTable("limelight")
+        tx = table.getNumber('tx', None)
+        ty = table.getNumber('ty', None)
+        ta = table.getNumber('ta', None)
+        ts = table.getNumber('ts', None)
+        '''
+        '''
+        self.tx = NetworkTable.getNumber('tx', None)
+        self.ty = NetworkTable.getNumber('ty', None)
+        self.ta = NetworkTable.getNumber('ta', None)
+        self.ts = NetworkTable.getNumber('ts', None)
+        '''
+        #self.table = ntcore.NetworkTableInstance()
+        #self.table1 = self.table.getTable('limelight')
+        self.tx = self.lmtable.getNumber('tx', None)
+        self.ty = self.lmtable.getNumber('ty', None)
+        self.ta = self.lmtable.getNumber('ta', None)
+        self.ts = self.lmtable.getNumber('ts', None)
 
     def teleopInit(self):
         """Executed at the start of teleop mode"""
@@ -126,17 +186,41 @@ class MyRobot(wpilib.TimedRobot):
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
         if self.joystick.getRawButtonPressed(4):
             print("Button 4 Pressed")
-            print("solenoid value = ",self.doubleSolenoid.get())
+            #print("solenoid value = ",self.doubleSolenoid.get())
+            # NAVX uses network tables as well 
+            print("Displacement X = ", self.navx.getDisplacementX())
+            print("Yaw = ", self.navx.getYaw())  
+            print("Angle = ", self.navx.getAngle())   
         if self.joystick.getRawButtonPressed(5):
             print("Button 5 Pressed")
+            '''
+            print("CTRE PulseWidthEncoded Position := ", self.encoder.PulseWidthEncodedPosition.value)
+            print("QuadEncoder = ", self.encoder.QuadEncoder.value)
+            sensorreadout = self.rearRightMotor.getSensorCollection()
+            print("Sensor Collection Analog In Raw = ", sensorreadout.getAnalogInRaw())
+            print("Sensor Collection Pulse Width Pos = ", sensorreadout.getPulseWidthPosition())
+            print("Sensor Collection Pulse Width Rise to Fall = ", sensorreadout.getPulseWidthRiseToFallUs())
+            print("Sensor Collection QuadIdx = ", sensorreadout.getPinStateQuadIdx())
+            print("Sensor Collection Pulse Width Velocity = ", sensorreadout.getPulseWidthVelocity())
+            print("Sensor Collection Quad Position = ", sensorreadout.getQuadraturePosition())
+            print("Sensor Collection Quad Velocity = ", sensorreadout.getQuadratureVelocity)
+            '''
+            # Encoder Testing
+            print("Sensor Position", self.frontLeftMotor.getSelectedSensorPosition(0))
         if self.joystick.getRawButtonPressed(6):
             print("Button 6 Pressed")
             self.compressor.disable()
         if self.joystick.getRawButtonPressed(7):
+            #Limelight
             print("Button 7 Pressed")
+            print("Limelight ta = ", self.ta)
+            print("Limelight ts = ", self.ts)
+            print("Limelight ty = ", self.ty)
+            print("Limelight tx = ", self.tx)
+            
         self.driveTrain.arcadeDrive(-self.joystick.getY(), self.joystick.getX())
 
-    ''' TEST class MyRobot(wpilib.TimedRobot):
+    ''' TEST class MyRobot(wpilib.TimedRobot)
 
     def robotInit(self):
         self.frontLeft = wpilib.Spark(0)
