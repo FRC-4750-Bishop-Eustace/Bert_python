@@ -133,7 +133,8 @@ class MyRobot(wpilib.TimedRobot):
         #self.lltable = ntcore.NetworkTableInstance
         
         ## DEFINE NAVX
-        self.navx = navx.AHRS.create_i2c()
+        #self.navx = navx.AHRS.create_i2c(wpilib.I2C.Port.kMXP, update_rate_hz=80)
+        self.navxer = navx.AHRS.create_i2c()
         print("NAVX firmware = ", navx.AHRS.getFirmwareVersion)
         #print("I2C device address is {}".format(wpilib.I2C.getDeviceAddress()))
         #print("I2C address only {}".format(wpilib.I2C.addressOnly()))
@@ -197,9 +198,9 @@ class MyRobot(wpilib.TimedRobot):
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        self.displacement = self.navx.getDisplacementX()
-        self.angle = self.navx.getAngle()
-        self.yaw = self.navx.getYaw()
+        self.displacement = self.navxer.getDisplacementX()
+        self.angle = self.navxer.getAngle()
+        self.yaw = self.navxer.getYaw()
         
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
@@ -246,17 +247,23 @@ class MyRobot(wpilib.TimedRobot):
             
         self.driveTrain.arcadeDrive(-self.joystick.getY(), self.joystick.getX())
         
-        #CONTROLLER BUTTOMNS
+        #CONTROLLER BUTTONS
         if self.controller.getRawButtonPressed(1):
             print("Controller button 1 pressed")
+            self.lmtable.putNumber('ledMode', 1)
         if self.controller.getRawButtonPressed(2):
             print("Controller button 2 pressed")
+            self.lmtable.putNumber('ledMode', 3)
         if self.controller.getRawButtonPressed(3):
             print("Controller button 3 pressed")
+            print("Setting to April Tag Mode")
+            self.lmtable.putNumber('pipeline', 0)
         if self.controller.getRawButtonPressed(4):
             print("Controller button 4 pressed")
         if self.controller.getRawButtonPressed(5):
             print("Controller button 5 pressed")
+            print("Setting to Peg Mode")
+            self.lmtable.putNumber('pipeline', 1)
         if self.controller.getRawButtonPressed(6):
             print("Controller button 6 pressed")
         if self.controller.getRawButtonPressed(7):
