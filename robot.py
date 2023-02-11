@@ -7,7 +7,7 @@ import wpilib.drive
 import ctre 
 import navx
 
-import ntcore
+import ntcore 
 #from networktables import NetworkTables
 
 # HARDWARE DEF
@@ -120,10 +120,12 @@ class MyRobot(wpilib.TimedRobot):
 
         
         ## NETWORK TABLES
-        inst = ntcore.NetworkTableInstance.getDefault()
-        self.navxtable = inst.getTable("SmartDashboard")
-        self.lmtable = inst.getTable("limelight")
-        
+        self.inst = ntcore.NetworkTableInstance.getDefault()
+        #self.inst.startServer()
+        #self.inst = ntcore.NetworkTableInstance.create()
+        self.navxtable = self.inst.getTable("SmartDashboard")
+        self.lmtable = self.inst.getTable("limelight")
+        #self.lltable = ntcore.NetworkTableInstance
         
         ## DEFINE NAVX
         self.navx = navx.AHRS.create_i2c()
