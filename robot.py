@@ -149,11 +149,14 @@ class MyRobot(wpilib.TimedRobot):
         '''
         #self.table = ntcore.NetworkTableInstance()
         #self.table1 = self.table.getTable('limelight')
+        '''
         self.tx = self.lmtable.getNumber('tx', None)
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-
+        '''
+        # Mr. Carlin's genius helped find this "da" moment, had to add the call to teleop
+        
     def teleopInit(self):
         """Executed at the start of teleop mode"""
         #self.myRobot.setSafetyEnabled(True)
