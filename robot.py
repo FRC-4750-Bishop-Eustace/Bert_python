@@ -8,11 +8,14 @@ import ctre
 import navx
 
 import ntcore 
+import logging 
 #from networktables import NetworkTables
 
 # HARDWARE DEF
 
 #from wpilib.drive import DifferentialDrive
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class MyRobot(wpilib.TimedRobot):
@@ -214,6 +217,10 @@ class MyRobot(wpilib.TimedRobot):
             self.compressor.disable()
         if self.joystick.getRawButtonPressed(7):
             #Limelight
+            self.tx = self.lmtable.getNumber('tx', None)
+            self.ty = self.lmtable.getNumber('ty', None)
+            self.ta = self.lmtable.getNumber('ta', None)
+            self.ts = self.lmtable.getNumber('ts', None)
             print("Button 7 Pressed")
             print("Limelight ta = ", self.ta)
             print("Limelight ts = ", self.ts)
