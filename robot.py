@@ -9,6 +9,8 @@ import navx
 
 import ntcore 
 import logging 
+import cscore 
+
 #from networktables import NetworkTables
 
 # HARDWARE DEF
@@ -48,7 +50,6 @@ class MyRobot(wpilib.TimedRobot):
         #self.frontRightMotor.set(0.3)
         self.rearRightMotor = ctre.WPI_TalonSRX(14)
         #self.rearRightMotor.set(0.3)
-        
         '''
         self.frontLeftMotor = ctre.WPI_TalonSRX(0)
         #self.frontLeftMotor.set(0.3)
@@ -74,6 +75,7 @@ class MyRobot(wpilib.TimedRobot):
 
         # joysticks 1 & 2 on the driver station
         self.joystick = wpilib.Joystick(0)
+        self.controller = wpilib.Joystick(1)
         #self.rightStick = wpilib.Joystick(1)
         self.timer = wpilib.Timer()
 
@@ -132,6 +134,9 @@ class MyRobot(wpilib.TimedRobot):
         
         ## DEFINE NAVX
         self.navx = navx.AHRS.create_i2c()
+        print("NAVX firmware = ", navx.AHRS.getFirmwareVersion)
+        #print("I2C device address is {}".format(wpilib.I2C.getDeviceAddress()))
+        #print("I2C address only {}".format(wpilib.I2C.addressOnly()))
         
         ## DEFINE LIMELIGHT
         '''
@@ -161,9 +166,11 @@ class MyRobot(wpilib.TimedRobot):
         """Executed at the start of teleop mode"""
         #self.myRobot.setSafetyEnabled(True)
         self.driveTrain.setSafetyEnabled(True)
-        #self.driveTrain.setSafetyEnabled(False)
+        self.driveTrain.setSafetyEnabled(False)
         self.driveTrain.setExpiration(0.1)
         self.driveTrain.feed()
+        # Launch Camera
+        wpilib.CameraServer.launch()
 
     def teleopPeriodic(self):
         """Runs the motors with tank steering"""
@@ -183,6 +190,17 @@ class MyRobot(wpilib.TimedRobot):
         #print(self.joystick.getY())
         #print(self.joystick.getX())
         #print(self.joystick.getRawButtonPressed(1))
+        
+        #LIMELIGHT Variables
+        
+        self.tx = self.lmtable.getNumber('tx', None)
+        self.ty = self.lmtable.getNumber('ty', None)
+        self.ta = self.lmtable.getNumber('ta', None)
+        self.ts = self.lmtable.getNumber('ts', None)
+        self.displacement = self.navx.getDisplacementX()
+        self.angle = self.navx.getAngle()
+        self.yaw = self.navx.getYaw()
+        
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
@@ -196,9 +214,9 @@ class MyRobot(wpilib.TimedRobot):
             print("Button 4 Pressed")
             #print("solenoid value = ",self.doubleSolenoid.get())
             # NAVX uses network tables as well 
-            print("Displacement X = ", self.navx.getDisplacementX())
-            print("Yaw = ", self.navx.getYaw())  
-            print("Angle = ", self.navx.getAngle())   
+            print("Displacement X = ", self.displacement)
+            print("Yaw = ", self.yaw)  
+            print("Angle = ", self.angle)   
         if self.joystick.getRawButtonPressed(5):
             print("Button 5 Pressed")
             '''
@@ -220,10 +238,6 @@ class MyRobot(wpilib.TimedRobot):
             self.compressor.disable()
         if self.joystick.getRawButtonPressed(7):
             #Limelight
-            self.tx = self.lmtable.getNumber('tx', None)
-            self.ty = self.lmtable.getNumber('ty', None)
-            self.ta = self.lmtable.getNumber('ta', None)
-            self.ts = self.lmtable.getNumber('ts', None)
             print("Button 7 Pressed")
             print("Limelight ta = ", self.ta)
             print("Limelight ts = ", self.ts)
@@ -231,7 +245,34 @@ class MyRobot(wpilib.TimedRobot):
             print("Limelight tx = ", self.tx)
             
         self.driveTrain.arcadeDrive(-self.joystick.getY(), self.joystick.getX())
-
+        
+        #CONTROLLER BUTTOMNS
+        if self.controller.getRawButtonPressed(1):
+            print("Controller button 1 pressed")
+        if self.controller.getRawButtonPressed(2):
+            print("Controller button 2 pressed")
+        if self.controller.getRawButtonPressed(3):
+            print("Controller button 3 pressed")
+        if self.controller.getRawButtonPressed(4):
+            print("Controller button 4 pressed")
+        if self.controller.getRawButtonPressed(5):
+            print("Controller button 5 pressed")
+        if self.controller.getRawButtonPressed(6):
+            print("Controller button 6 pressed")
+        if self.controller.getRawButtonPressed(7):
+            print("Controller button 7 pressed")
+        if self.controller.getRawButtonPressed(8):
+            print("Controller button 8 pressed")
+        if self.controller.getRawButtonPressed(9):
+            print("Controller button 9 pressed")
+        if self.controller.getRawButtonPressed(10):
+            print("Controller buttone 10 pressed")
+        '''
+        if self.tx == 0:
+            print("Aligned")
+        else:
+            print("Unaligned")
+        '''
     ''' TEST class MyRobot(wpilib.TimedRobot)
 
     def robotInit(self):
