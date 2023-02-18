@@ -162,7 +162,8 @@ class MyRobot(wpilib.TimedRobot):
         self.ts = self.lmtable.getNumber('ts', None)
         '''
         # Mr. Carlin's genius helped find this "da" moment, had to add the call to teleop
-        
+        #Defining arm extension sensor
+        self.extension=wpilib.AnalogInput(3)
     def teleopInit(self):
         """Executed at the start of teleop mode"""
         #self.myRobot.setSafetyEnabled(True)
@@ -267,6 +268,7 @@ class MyRobot(wpilib.TimedRobot):
         if self.controller.getRawButtonPressed(6):
             print("Controller button 6 pressed")
         if self.controller.getRawButtonPressed(7):
+            print("extension_value", self.extension.getValue())
             print("Controller button 7 pressed")
         if self.controller.getRawButtonPressed(8):
             print("Controller button 8 pressed")
@@ -301,6 +303,18 @@ class MyRobot(wpilib.TimedRobot):
         self.driveTrain.feed()
         self.timer.reset()
         self.timer.start()
+
+    def distance():
+        runningTotal = 0
+        avgFactor = 75
+        for x in range(avgFactor):
+            v = math.read_adc(0)
+            distance = 28250 / (v-229.5)
+            runningTotal = runningTotal + distance
+        else:
+            distance = (runningTotal / avgFactor)
+
+        return distance
 
     def autonomousPeriodic(self):
         """This function is called periodically during autonomous."""
