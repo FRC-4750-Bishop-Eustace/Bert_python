@@ -199,7 +199,7 @@ class MyRobot(wpilib.TimedRobot):
         '''
         # Mr. Carlin's genius helped find this "da" moment, had to add the call to teleop
         
-        """Executed at the start of teleop mode"""
+        #"""Executed at the start of teleop mode"""
         #self.myRobot.setSafetyEnabled(True)
         self.driveTrain.setSafetyEnabled(True)
         self.driveTrain.setSafetyEnabled(False)
@@ -359,14 +359,77 @@ class MyRobot(wpilib.TimedRobot):
         self.timer.reset()
         self.timer.start()
 
+        """Runs the motors with tank steering"""
+        #self.myRobot.tankDrive(self.leftStick.getY() * -1, self.rightStick.getY() * -1)
+        i = 0
+        #if i==0:
+        #    print("In TeleopMode")
+        #    i=i+1
+        #self.driveTrain.arcadeDrive(-0.5, 0)
+        #print("Driving")
+        #time.sleep(1)
+        #print("Sleep Complete")
+        #self.driveTrain.arcadeDrive(0,0)
+        #self.myRobot.arcadeDrive(
+        #    self.stick.getRawAxis(0), self.stick.getRawAxis(1), True
+        #)
+        #print(self.joystick.getY())
+        #print(self.joystick.getX())
+        #print(self.joystick.getRawButtonPressed(1))
+        
+        #LIMELIGHT Variables
+        
+        self.tx = self.lmtable.getNumber('tx', None)
+        self.ty = self.lmtable.getNumber('ty', None)
+        self.ta = self.lmtable.getNumber('ta', None)
+        self.ts = self.lmtable.getNumber('ts', None)
+        self.displacement = self.navxer.getDisplacementX()
+        self.angle = self.navxer.getAngle()
+        self.yaw = self.navxer.getYaw()
+
+        self.limelightLensHeightInches = 14
+
+        #target distance to dashborard
+        self.distance = targetDistance(self.ta)
+        self.sd.putNumber('tDistance', self.distance)
+
+        #target alignment pushing to dashboard
+        self.aim = targetAlignment(self.tx)
+        self.sd.putString('tAim', self.aim)
+
+        #arm extension to dashboard
+        self.reach = armExtension(self.distance)
+        self.sd.putNumber('reach', self.reach)
+
     def autonomousPeriodic(self):
+        self.tx = self.lmtable.getNumber('tx', None)
+        self.ty = self.lmtable.getNumber('ty', None)
+        self.ta = self.lmtable.getNumber('ta', None)
+        self.ts = self.lmtable.getNumber('ts', None)
+        self.displacement = self.navxer.getDisplacementX()
+        self.angle = self.navxer.getAngle()
+        self.yaw = self.navxer.getYaw()
+
+        self.limelightLensHeightInches = 14
+
+        #target distance to dashborard
+        self.distance = targetDistance(self.ta)
+        self.sd.putNumber('tDistance', self.distance)
+
+        #target alignment pushing to dashboard
+        self.aim = targetAlignment(self.tx)
+        self.sd.putString('tAim', self.aim)
+
+        #arm extension to dashboard
+        self.reach = armExtension(self.distance)
+        self.sd.putNumber('reach', self.reach)
         """This function is called periodically during autonomous."""
         '''
         print("Autonomous Mode")
         self.driveTrain.arcadeDrive(-0.5, 0)
         #print("Driving")
         time.sleep(1)
-        #print("Sleep Complete")
+        #p  rint("Sleep Complete")
         self.driveTrain.arcadeDrive(0,0)
         # Drive for two seconds
         '''
@@ -376,12 +439,26 @@ class MyRobot(wpilib.TimedRobot):
             i=i+1
         #self.driveTrain.arcadeDrive(-0.5, 0)
         #time.sleep(0.5)
-        #self.driveTrain.arcadeDrive(0, 0)
-        
-        if self.timer.get() < 2.0:
-            self.driveTrain.arcadeDrive(-0.5, 0)  # Drive forwards at half speed
+        #self.driveTrain.arcadeDrive(0, 0) 
+        #if self.timer.get() < 2.0:
+        #    self.driveTrain.arcadeDrive(-0.5, 0)  # Drive forwards at half speed
+        #else:
+         #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
+
+        if (self.distance >= 4):
+            self.driveTrain.arcadeDrive(0.5, 0)
+            if (self.distance  <= 3):
+                self.driveTrain.arcadeDrive(0, 0)
         else:
-            self.driveTrain.arcadeDrive(0, 0)  # Stop robot
+            self.driveTrain.arcadeDrive(0, 0)
+        
+        #if (self.aim == 'unaligned'):
+        #   self.drive
+
+
+        
+            
+    
     
    
 '''
