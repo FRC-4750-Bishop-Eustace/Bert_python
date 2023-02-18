@@ -57,7 +57,7 @@ def armExtension(x):
     return distance
 
 def solenoidclaw(x):
-    isSolenoidClawOpen = ''
+    isSolenoidClawOpen = 'undefined'
     if (x==1):
         #print ("Claw Open")
         isSolenoidClawOpen = 'Open'
