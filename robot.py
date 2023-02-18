@@ -9,7 +9,9 @@ import navx
 
 import ntcore 
 import logging 
-import cscore 
+import cscore
+
+import math
 
 #from networktables import NetworkTables
 
@@ -17,8 +19,42 @@ import cscore
 
 #from wpilib.drive import DifferentialDrive
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
+#GLOBAL DEF
+minTX = -1
+maxTX = 1
+
+#Distance equation
+def targetDistance(x):
+        a = 4.509
+        b = -0.5132
+        distance = 0
+        if x > 0:
+            distance = a * x ** b
+        else:
+            pass
+        return distance
+
+def targetAlignment(x):
+    isTargetAligned = ''
+    if (minTX <= x <= maxTX):
+        #print("Aligned")
+        isTargetAligned = 'Aligned'
+    else:
+        #print("unaligned")
+        isTargetAligned = 'Unaligned'
+    return isTargetAligned
+
+def armExtension(x):
+    runningTotal = 0
+    avgFactor = 75
+    for y in range(avgFactor):
+        distance = 28250 / (x-229.5)
+        runningTotal = runningTotal + distance
+    else:
+        distance = (runningTotal + distance)
+    return distance
 
 class MyRobot(wpilib.TimedRobot):
     def robotInit(self):
@@ -128,7 +164,7 @@ class MyRobot(wpilib.TimedRobot):
         self.inst = ntcore.NetworkTableInstance.getDefault()
         #self.inst.startServer()
         #self.inst = ntcore.NetworkTableInstance.create()
-        self.navxtable = self.inst.getTable("SmartDashboard")
+        self.sd = self.inst.getTable("SmartDashboard")
         self.lmtable = self.inst.getTable("limelight")
         #self.lltable = ntcore.NetworkTableInstance
         
@@ -163,7 +199,6 @@ class MyRobot(wpilib.TimedRobot):
         '''
         # Mr. Carlin's genius helped find this "da" moment, had to add the call to teleop
         
-    def teleopInit(self):
         """Executed at the start of teleop mode"""
         #self.myRobot.setSafetyEnabled(True)
         self.driveTrain.setSafetyEnabled(True)
@@ -172,6 +207,9 @@ class MyRobot(wpilib.TimedRobot):
         self.driveTrain.feed()
         # Launch Camera
         wpilib.CameraServer.launch()
+
+        #ARM EXTENTION
+        self.extension = wpilib.AnalogInput(3)
 
     def teleopPeriodic(self):
         """Runs the motors with tank steering"""
@@ -201,6 +239,21 @@ class MyRobot(wpilib.TimedRobot):
         self.displacement = self.navxer.getDisplacementX()
         self.angle = self.navxer.getAngle()
         self.yaw = self.navxer.getYaw()
+
+        self.limelightLensHeightInches = 14
+
+        #target distance to dashborard
+        self.distance = targetDistance(self.ta)
+        self.sd.putNumber('tDistance', self.distance)
+
+        #target alignment pushing to dashboard
+        self.aim = targetAlignment(self.tx)
+        self.sd.putString('tAim', self.aim)
+
+        #arm extension to dashboard
+        self.reach = armExtension(self.distance)
+        self.sd.putNumber('reach', self.reach)
+
         
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
@@ -266,8 +319,15 @@ class MyRobot(wpilib.TimedRobot):
             self.lmtable.putNumber('pipeline', 1)
         if self.controller.getRawButtonPressed(6):
             print("Controller button 6 pressed")
+            if (self.tx >= -1):
+                print("Aligned")
+            else:
+                print("unaligned")
         if self.controller.getRawButtonPressed(7):
             print("Controller button 7 pressed")
+            #print("extension_value", self.extension.getValue())
+            armDistance = armExtension(self.extension.getValue())
+            print("arm_extension = ", armDistance)
         if self.controller.getRawButtonPressed(8):
             print("Controller button 8 pressed")
         if self.controller.getRawButtonPressed(9):
@@ -281,16 +341,13 @@ class MyRobot(wpilib.TimedRobot):
             print("Unaligned")
         '''
     ''' TEST class MyRobot(wpilib.TimedRobot)
-
     def robotInit(self):
         self.frontLeft = wpilib.Spark(0)
         self.rearLeft = wpilib.Spark(1)
         self.left = wpilib.MotorControllerGroup(self.frontLeft, self.rearLeft)
-
         self.frontRight = wpilib.Spark(15)
         self.rearRight = wpilib.Spark(14)
         self.right = wpilib.MotorControllerGroup(self.frontRight, self.rearRight)
-
         self.drive = wpilib.drive.DifferentialDrive(self.left, self.right)
     '''
     def autonomousInit(self):
@@ -325,7 +382,8 @@ class MyRobot(wpilib.TimedRobot):
             self.driveTrain.arcadeDrive(-0.5, 0)  # Drive forwards at half speed
         else:
             self.driveTrain.arcadeDrive(0, 0)  # Stop robot
-        
+    
+   
 '''
     def teleopPeriodic(self):
         """This function is called periodically during operator control."""
