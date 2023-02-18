@@ -304,18 +304,6 @@ class MyRobot(wpilib.TimedRobot):
         self.timer.reset()
         self.timer.start()
 
-    def distance():
-        runningTotal = 0
-        avgFactor = 75
-        for x in range(avgFactor):
-            v = math.read_adc(0)
-            distance = 28250 / (v-229.5)
-            runningTotal = runningTotal + distance
-        else:
-            distance = (runningTotal / avgFactor)
-
-        return distance
-
     def autonomousPeriodic(self):
         """This function is called periodically during autonomous."""
         '''
