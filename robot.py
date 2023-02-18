@@ -56,6 +56,16 @@ def armExtension(x):
         distance = (runningTotal + distance)
     return distance
 
+def solenoidclaw(x):
+    isSolenoidClawOpen = ''
+    if (x==1):
+        #print ("Claw Open")
+        isSolenoidClawOpen = 'Open'
+    else:
+        #print ("Claw Close")
+        isSolenoidClawOpen = 'Close'
+    return isSolenoidClawOpen
+
 class MyRobot(wpilib.TimedRobot):
     def robotInit(self):
         """Robot initialization function"""
@@ -252,18 +262,19 @@ class MyRobot(wpilib.TimedRobot):
 
         #arm extension to dashboard
         self.reach = armExtension(self.distance)
-        self.sd.putNumber('reach', self.reach)
+        self.sd.putNumber('reach', self.reach)        
 
-        
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
-            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward) #opens
+            self.sd.putString(solenoidclaw(1)) #claw to dashboard
         if self.joystick.getRawButtonPressed(2):
             print("Button 2 Pressed")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kOff)
         if self.joystick.getRawButtonPressed(3):
             print("Button 3 Pressed")
-            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse) #closes
+            self.sd.putString(solenoidclaw(3)) #claw to dashboard
         if self.joystick.getRawButtonPressed(4):
             print("Button 4 Pressed")
             #print("solenoid value = ",self.doubleSolenoid.get())
