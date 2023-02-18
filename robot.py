@@ -267,14 +267,14 @@ class MyRobot(wpilib.TimedRobot):
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward) #opens
-            self.sd.putString(solenoidclaw(1)) #claw to dashboard
+            self.sd.putString('clawstate', solenoidclaw(1)) #claw to dashboard
         if self.joystick.getRawButtonPressed(2):
             print("Button 2 Pressed")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kOff)
         if self.joystick.getRawButtonPressed(3):
             print("Button 3 Pressed")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse) #closes
-            self.sd.putString(solenoidclaw(3)) #claw to dashboard
+            self.sd.putString('clawstate', solenoidclaw(3)) #claw to dashboard
         if self.joystick.getRawButtonPressed(4):
             print("Button 4 Pressed")
             #print("solenoid value = ",self.doubleSolenoid.get())
