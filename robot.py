@@ -64,6 +64,7 @@ def solenoidclaw(x):
     else:
         #print ("Claw Close")
         isSolenoidClawOpen = 'Close'
+    print('returningsolenoidclaw')
     return isSolenoidClawOpen
 
 class MyRobot(wpilib.TimedRobot):
