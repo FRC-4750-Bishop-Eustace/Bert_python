@@ -9,7 +9,9 @@ import navx
 
 import ntcore 
 import logging 
-import cscore 
+import cscore
+
+import math
 
 #from networktables import NetworkTables
 
@@ -17,11 +19,51 @@ import cscore
 
 #from wpilib.drive import DifferentialDrive
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
+#GLOBAL DEF
+minTX = -1
+maxTX = 1
+autoGo = 4
+autoStop = 3
+
+
+
+
+#Distance equation
+def targetDistance(x):
+        a = 4.509
+        b = -0.5132
+        distance = 0
+        if x > 0:
+            distance = a * x ** b
+        else:
+            pass
+        return distance
+
+def targetAlignment(x):
+    isTargetAligned = ''
+    if (minTX <= x <= maxTX):
+        #print("Aligned")
+        isTargetAligned = 'Aligned'
+    else:
+        #print("unaligned")
+        isTargetAligned = 'Unaligned'
+    return isTargetAligned
+
+def armExtension(x):
+    runningTotal = 0
+    avgFactor = 75
+    for y in range(avgFactor):
+        distance = 28250 / (x-229.5)
+        runningTotal = runningTotal + distance
+    else:
+        distance = (runningTotal + distance)
+    return distance
 
 class MyRobot(wpilib.TimedRobot):
     def robotInit(self):
+        print("AtRobotInitBeginning")
         """Robot initialization function"""
 
         # object that handles basic drive operations
@@ -128,12 +170,13 @@ class MyRobot(wpilib.TimedRobot):
         self.inst = ntcore.NetworkTableInstance.getDefault()
         #self.inst.startServer()
         #self.inst = ntcore.NetworkTableInstance.create()
-        self.navxtable = self.inst.getTable("SmartDashboard")
+        self.sd = self.inst.getTable("SmartDashboard")
         self.lmtable = self.inst.getTable("limelight")
         #self.lltable = ntcore.NetworkTableInstance
         
         ## DEFINE NAVX
-        self.navx = navx.AHRS.create_i2c()
+        #self.navx = navx.AHRS.create_i2c(wpilib.I2C.Port.kMXP, update_rate_hz=80)
+        self.navxer = navx.AHRS.create_i2c()
         print("NAVX firmware = ", navx.AHRS.getFirmwareVersion)
         #print("I2C device address is {}".format(wpilib.I2C.getDeviceAddress()))
         #print("I2C address only {}".format(wpilib.I2C.addressOnly()))
@@ -162,8 +205,7 @@ class MyRobot(wpilib.TimedRobot):
         '''
         # Mr. Carlin's genius helped find this "da" moment, had to add the call to teleop
         
-    def teleopInit(self):
-        """Executed at the start of teleop mode"""
+        #"""Executed at the start of teleop mode"""
         #self.myRobot.setSafetyEnabled(True)
         self.driveTrain.setSafetyEnabled(True)
         self.driveTrain.setSafetyEnabled(False)
@@ -171,6 +213,11 @@ class MyRobot(wpilib.TimedRobot):
         self.driveTrain.feed()
         # Launch Camera
         wpilib.CameraServer.launch()
+
+        #ARM EXTENTION
+        self.extension = wpilib.AnalogInput(3)
+
+        print("AtRobotInitEnd")
 
     def teleopPeriodic(self):
         """Runs the motors with tank steering"""
@@ -197,9 +244,24 @@ class MyRobot(wpilib.TimedRobot):
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        self.displacement = self.navx.getDisplacementX()
-        self.angle = self.navx.getAngle()
-        self.yaw = self.navx.getYaw()
+        self.displacement = self.navxer.getDisplacementX()
+        self.angle = self.navxer.getAngle()
+        self.yaw = self.navxer.getYaw()
+
+        self.limelightLensHeightInches = 14
+
+        #target distance to dashborard
+        self.distance = targetDistance(self.ta)
+        self.sd.putNumber('tDistance', self.distance)
+
+        #target alignment pushing to dashboard
+        self.aim = targetAlignment(self.tx)
+        self.sd.putString('tAim', self.aim)
+
+        #arm extension to dashboard
+        self.reach = armExtension(self.distance)
+        self.sd.putNumber('reach', self.reach)
+
         
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
@@ -246,23 +308,37 @@ class MyRobot(wpilib.TimedRobot):
             
         self.driveTrain.arcadeDrive(-self.joystick.getY(), self.joystick.getX())
         
-        #CONTROLLER BUTTOMNS
+        #CONTROLLER BUTTONS
         if self.controller.getRawButtonPressed(1):
             print("Controller button 1 pressed")
+            self.lmtable.putNumber('ledMode', 1)
         if self.controller.getRawButtonPressed(2):
             print("Controller button 2 pressed")
+            self.lmtable.putNumber('ledMode', 3)
         if self.controller.getRawButtonPressed(3):
             print("Controller button 3 pressed")
+            print("Setting to April Tag Mode")
+            self.lmtable.putNumber('pipeline', 0)
         if self.controller.getRawButtonPressed(4):
             print("Controller button 4 pressed")
         if self.controller.getRawButtonPressed(5):
             print("Controller button 5 pressed")
+            print("Setting to Peg Mode")
+            self.lmtable.putNumber('pipeline', 1)
         if self.controller.getRawButtonPressed(6):
             print("Controller button 6 pressed")
+            if (self.tx >= -1):
+                print("Aligned")
+            else:
+                print("unaligned")
         if self.controller.getRawButtonPressed(7):
             print("Controller button 7 pressed")
+            #print("extension_value", self.extension.getValue())
+            armDistance = armExtension(self.extension.getValue())
+            print("arm_extension = ", armDistance)
         if self.controller.getRawButtonPressed(8):
             print("Controller button 8 pressed")
+            print("drivetrain = ", self.driveTrain)
         if self.controller.getRawButtonPressed(9):
             print("Controller button 9 pressed")
         if self.controller.getRawButtonPressed(10):
@@ -274,16 +350,13 @@ class MyRobot(wpilib.TimedRobot):
             print("Unaligned")
         '''
     ''' TEST class MyRobot(wpilib.TimedRobot)
-
     def robotInit(self):
         self.frontLeft = wpilib.Spark(0)
         self.rearLeft = wpilib.Spark(1)
         self.left = wpilib.MotorControllerGroup(self.frontLeft, self.rearLeft)
-
         self.frontRight = wpilib.Spark(15)
         self.rearRight = wpilib.Spark(14)
         self.right = wpilib.MotorControllerGroup(self.frontRight, self.rearRight)
-
         self.drive = wpilib.drive.DifferentialDrive(self.left, self.right)
     '''
     def autonomousInit(self):
@@ -295,14 +368,78 @@ class MyRobot(wpilib.TimedRobot):
         self.timer.reset()
         self.timer.start()
 
+        """Runs the motors with tank steering"""
+        #self.myRobot.tankDrive(self.leftStick.getY() * -1, self.rightStick.getY() * -1)
+        i = 0
+        #if i==0:
+        #    print("In TeleopMode")
+        #    i=i+1
+        #self.driveTrain.arcadeDrive(-0.5, 0)
+        #print("Driving")
+        #time.sleep(1)
+        #print("Sleep Complete")
+        #self.driveTrain.arcadeDrive(0,0)
+        #self.myRobot.arcadeDrive(
+        #    self.stick.getRawAxis(0), self.stick.getRawAxis(1), True
+        #)
+        #print(self.joystick.getY())
+        #print(self.joystick.getX())
+        #print(self.joystick.getRawButtonPressed(1))
+        
+        #LIMELIGHT Variables
+        
+        self.tx = self.lmtable.getNumber('tx', None)
+        self.ty = self.lmtable.getNumber('ty', None)
+        self.ta = self.lmtable.getNumber('ta', None)
+        self.ts = self.lmtable.getNumber('ts', None)
+        self.displacement = self.navxer.getDisplacementX()
+        self.angle = self.navxer.getAngle()
+        self.yaw = self.navxer.getYaw()
+
+        self.limelightLensHeightInches = 14
+        '''
+        #target distance to dashborard
+        self.distance = targetDistance(self.ta)
+        self.sd.putNumber('tDistance', self.distance)
+
+        #target alignment pushing to dashboard
+        self.aim = targetAlignment(self.tx)
+        self.sd.putString('tAim', self.aim)
+
+        #arm extension to dashboard
+        self.reach = armExtension(self.distance)
+        self.sd.putNumber('reach', self.reach)
+        '''
+        print ("InAutomousInit")
     def autonomousPeriodic(self):
+        self.tx = self.lmtable.getNumber('tx', None)
+        self.ty = self.lmtable.getNumber('ty', None)
+        self.ta = self.lmtable.getNumber('ta', None)
+        self.ts = self.lmtable.getNumber('ts', None)
+        self.displacement = self.navxer.getDisplacementX()
+        self.angle = self.navxer.getAngle()
+        self.yaw = self.navxer.getYaw()
+
+        self.limelightLensHeightInches = 14
+
+        #target distance to dashborard
+        self.distance = targetDistance(self.ta)
+        self.sd.putNumber('tDistance', self.distance)
+
+        #target alignment pushing to dashboard
+        self.aim = targetAlignment(self.tx)
+        self.sd.putString('tAim', self.aim)
+
+        #arm extension to dashboard
+        self.reach = armExtension(self.distance)
+        self.sd.putNumber('reach', self.reach)
         """This function is called periodically during autonomous."""
         '''
         print("Autonomous Mode")
         self.driveTrain.arcadeDrive(-0.5, 0)
         #print("Driving")
         time.sleep(1)
-        #print("Sleep Complete")
+        #p  rint("Sleep Complete")
         self.driveTrain.arcadeDrive(0,0)
         # Drive for two seconds
         '''
@@ -312,13 +449,31 @@ class MyRobot(wpilib.TimedRobot):
             i=i+1
         #self.driveTrain.arcadeDrive(-0.5, 0)
         #time.sleep(0.5)
-        #self.driveTrain.arcadeDrive(0, 0)
+        #self.driveTrain.arcadeDrive(0, 0) 
+        #if self.timer.get() < 2.0:
+        #    self.driveTrain.arcadeDrive(-0.5, 0)  # Drive forwards at half speed
+        #else:
+         #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
+
+        #autonomous distance
         
-        if self.timer.get() < 2.0:
-            self.driveTrain.arcadeDrive(-0.5, 0)  # Drive forwards at half speed
-        else:
-            self.driveTrain.arcadeDrive(0, 0)  # Stop robot
-        
+        if (self.distance >= autoGo):
+            self.driveTrain.arcadeDrive(0.5, 0)
+            if (self.distance  <= autoStop):
+                self.driveTrain.arcadeDrive(0, 0)
+ #       else:
+ #           self.driveTrain.arcadeDrive(0, 0)
+            
+        #self.driveTrain.arcadeDrive(x, y); x = forward, back/ y = right, left
+        '''
+        if (self.tx == 0):
+            self.driveTrain.arcadeDrive(0, -0.5)
+        if (self.tx >= 1):
+            self.driveTrain.arcadeDrive(0, -0.8)
+            if (self.tx <= 1):
+                self.driveTrain.arcadeDrive(0, 0)
+        '''
+   
 '''
     def teleopPeriodic(self):
         """This function is called periodically during operator control."""
