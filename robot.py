@@ -25,7 +25,7 @@ import math
 minTX = -1
 maxTX = 1
 autoGo = 4
-autoStop = 3
+autoStop = 3.9
 
 
 
@@ -456,24 +456,21 @@ class MyRobot(wpilib.TimedRobot):
          #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
 
         #autonomous distance
-        
+        '''
         if (self.distance >= autoGo):
             self.driveTrain.arcadeDrive(0.5, 0)
-            if (self.distance  <= autoStop):
-                self.driveTrain.arcadeDrive(0, 0)
- #       else:
- #           self.driveTrain.arcadeDrive(0, 0)
-            
+        else:
+            self.driveTrain.arcadeDrive(0, 0)
+        if (self.distance <= autoStop):
+            self.driveTrain.arcadeDrive(0, 0)
+        '''
         #self.driveTrain.arcadeDrive(x, y); x = forward, back/ y = right, left
-        '''
-        if (self.tx == 0):
-            self.driveTrain.arcadeDrive(0, -0.5)
+#        if (self.tx == 0):
+ #           self.driveTrain.arcadeDrive(0, -0.5)
         if (self.tx >= 1):
-            self.driveTrain.arcadeDrive(0, -0.8)
-            if (self.tx <= 1):
+            self.driveTrain.arcadeDrive(0, 0.5)
+            if (self.tx <= 0):
                 self.driveTrain.arcadeDrive(0, 0)
-        '''
-   
 '''
     def teleopPeriodic(self):
         """This function is called periodically during operator control."""
