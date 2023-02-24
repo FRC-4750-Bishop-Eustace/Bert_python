@@ -24,7 +24,7 @@ import math
 #GLOBAL DEF
 minTX = -1
 maxTX = 1
-
+''''
 #Distance equation
 def targetDistance(x):
         a = 4.509
@@ -55,7 +55,7 @@ def armExtension(x):
     else:
         distance = (runningTotal + distance)
     return distance
-
+'''
 def solenoidclaw(x):
     isSolenoidClawOpen = 'undefined'
     if (x==1):
@@ -242,7 +242,6 @@ class MyRobot(wpilib.TimedRobot):
         #print(self.joystick.getRawButtonPressed(1))
         
         #LIMELIGHT Variables
-        
         self.tx = self.lmtable.getNumber('tx', None)
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
@@ -252,7 +251,7 @@ class MyRobot(wpilib.TimedRobot):
         self.yaw = self.navxer.getYaw()
 
         self.limelightLensHeightInches = 14
-
+        '''
         #target distance to dashborard
         self.distance = targetDistance(self.ta)
         self.sd.putNumber('tDistance', self.distance)
@@ -264,7 +263,7 @@ class MyRobot(wpilib.TimedRobot):
         #arm extension to dashboard
         self.reach = armExtension(self.distance)
         self.sd.putNumber('reach', self.reach)        
-
+        '''
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward) #opens
@@ -338,8 +337,8 @@ class MyRobot(wpilib.TimedRobot):
         if self.controller.getRawButtonPressed(7):
             print("Controller button 7 pressed")
             #print("extension_value", self.extension.getValue())
-            armDistance = armExtension(self.extension.getValue())
-            print("arm_extension = ", armDistance)
+            #armDistance = armExtension(self.extension.getValue())
+            #print("arm_extension = ", armDistance)
         if self.controller.getRawButtonPressed(8):
             print("Controller button 8 pressed")
         if self.controller.getRawButtonPressed(9):
