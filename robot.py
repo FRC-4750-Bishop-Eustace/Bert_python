@@ -6,6 +6,7 @@ import wpilib
 import wpilib.drive
 import ctre 
 import navx
+import VL53L1X
 
 import ntcore 
 import logging 
@@ -171,7 +172,7 @@ class MyRobot(wpilib.TimedRobot):
         #self.inst.startServer()
         #self.inst = ntcore.NetworkTableInstance.create()
         self.sd = self.inst.getTable("SmartDashboard")
-        self.lmtable = self.inst.getTable("limelight")
+        #self.lmtable = self.inst.getTable("limelight")
         #self.lltable = ntcore.NetworkTableInstance
         
         ## DEFINE NAVX
@@ -215,7 +216,8 @@ class MyRobot(wpilib.TimedRobot):
         wpilib.CameraServer.launch()
 
         #ARM EXTENTION
-        self.extension = wpilib.AnalogInput(3)
+        self.extension = wpilib.AnalogInput(2)
+        self.psi = wpilib.AnalogInput(1)
 
         print("AtRobotInitEnd")
 
@@ -239,14 +241,12 @@ class MyRobot(wpilib.TimedRobot):
         #print(self.joystick.getRawButtonPressed(1))
         
         #LIMELIGHT Variables
-        
+        '''
         self.tx = self.lmtable.getNumber('tx', None)
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        self.displacement = self.navxer.getDisplacementX()
-        self.angle = self.navxer.getAngle()
-        self.yaw = self.navxer.getYaw()
+        
 
         self.limelightLensHeightInches = 14
 
@@ -261,7 +261,7 @@ class MyRobot(wpilib.TimedRobot):
         #arm extension to dashboard
         self.reach = armExtension(self.distance)
         self.sd.putNumber('reach', self.reach)
-
+        '''
         
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
@@ -275,10 +275,13 @@ class MyRobot(wpilib.TimedRobot):
         if self.joystick.getRawButtonPressed(4):
             print("Button 4 Pressed")
             #print("solenoid value = ",self.doubleSolenoid.get())
-            # NAVX uses network tables as well 
-            print("Displacement X = ", self.displacement)
-            print("Yaw = ", self.yaw)  
-            print("Angle = ", self.angle)   
+            # NAVX uses network tables as well
+            self.getY = self.navxer.getRawAccelY()
+            self.angle = self.navxer.getAngle()
+            self.getX = self.navxer.getRawAccelX() 
+            print("navx X = ", self.getX)
+            print("navx Y = ", self.getY)  
+            print("Anle = ", self.angle)   
         if self.joystick.getRawButtonPressed(5):
             print("Button 5 Pressed")
             '''
@@ -341,6 +344,7 @@ class MyRobot(wpilib.TimedRobot):
             print("drivetrain = ", self.driveTrain)
         if self.controller.getRawButtonPressed(9):
             print("Controller button 9 pressed")
+            print("psi = ", self.psi.getValue())
         if self.controller.getRawButtonPressed(10):
             print("Controller buttone 10 pressed")
         '''
@@ -455,22 +459,25 @@ class MyRobot(wpilib.TimedRobot):
         #else:
          #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
 
-        #autonomous distance
+        #DISTANCE
         '''
         if (self.distance >= autoGo):
             self.driveTrain.arcadeDrive(0.5, 0)
+        elif (self.distance <= autoStop):
+            self.driveTrain.arcadeDrive(0, 0)
         else:
             self.driveTrain.arcadeDrive(0, 0)
-        if (self.distance <= autoStop):
-            self.driveTrain.arcadeDrive(0, 0)
+        
         '''
         #self.driveTrain.arcadeDrive(x, y); x = forward, back/ y = right, left
 #        if (self.tx == 0):
  #           self.driveTrain.arcadeDrive(0, -0.5)
+
+        #ALIGNMENT lim 
         if (self.tx >= 1):
             self.driveTrain.arcadeDrive(0, 0.5)
-            if (self.tx <= 0):
-                self.driveTrain.arcadeDrive(0, 0)
+        elif (self.tx <= 0):
+            self.driveTrain.arcadeDrive(0, 0)
 '''
     def teleopPeriodic(self):
         """This function is called periodically during operator control."""
