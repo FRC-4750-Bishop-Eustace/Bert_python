@@ -6,7 +6,7 @@ import wpilib
 import wpilib.drive
 import ctre 
 import navx
-import VL53L1X
+#import VL53L1X
 
 import ntcore 
 import logging 
@@ -172,7 +172,7 @@ class MyRobot(wpilib.TimedRobot):
         #self.inst.startServer()
         #self.inst = ntcore.NetworkTableInstance.create()
         self.sd = self.inst.getTable("SmartDashboard")
-        #self.lmtable = self.inst.getTable("limelight")
+        self.lmtable = self.inst.getTable("limelight")
         #self.lltable = ntcore.NetworkTableInstance
         
         ## DEFINE NAVX
@@ -431,12 +431,12 @@ class MyRobot(wpilib.TimedRobot):
         self.sd.putNumber('tDistance', self.distance)
 
         #target alignment pushing to dashboard
-        self.aim = targetAlignment(self.tx)
-        self.sd.putString('tAim', self.aim)
+        #self.aim = targetAlignment(self.tx)
+        #self.sd.putString('tAim', self.aim)
 
         #arm extension to dashboard
-        self.reach = armExtension(self.distance)
-        self.sd.putNumber('reach', self.reach)
+        #self.reach = armExtension(self.distance)
+        #self.sd.putNumber('reach', self.reach)
         """This function is called periodically during autonomous."""
         '''
         print("Autonomous Mode")
@@ -472,12 +472,12 @@ class MyRobot(wpilib.TimedRobot):
         #self.driveTrain.arcadeDrive(x, y); x = forward, back/ y = right, left
 #        if (self.tx == 0):
  #           self.driveTrain.arcadeDrive(0, -0.5)
-
         #ALIGNMENT lim 
         if (self.tx >= 1):
-            self.driveTrain.arcadeDrive(0, 0.5)
-        elif (self.tx <= 0):
+            self.driveTrain.arcadeDrive(0, 0.6)
+        elif (self.tx < 1):
             self.driveTrain.arcadeDrive(0, 0)
+
 '''
     def teleopPeriodic(self):
         """This function is called periodically during operator control."""
