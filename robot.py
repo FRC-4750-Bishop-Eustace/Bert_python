@@ -1,11 +1,14 @@
 import math
 import time
 import sys
+import logging
+import threading
 
 import wpilib
 import wpilib.drive
 import ctre 
 import navx
+#import VL53L1X
 
 import ntcore 
 import logging 
@@ -24,6 +27,15 @@ import math
 #GLOBAL DEF
 minTX = -1
 maxTX = 1
+autoGo = 4
+autoStop = 3.9
+
+kp = -0.1
+min_command = 0.05
+steeringAdjust = 0.0
+
+#for "event.wait" to work
+event = threading.Event()
 
 #Distance equation
 def targetDistance(x):
@@ -58,6 +70,7 @@ def armExtension(x):
 
 class MyRobot(wpilib.TimedRobot):
     def robotInit(self):
+        print("AtRobotInitBeginning")
         """Robot initialization function"""
 
         # object that handles basic drive operations
@@ -209,7 +222,10 @@ class MyRobot(wpilib.TimedRobot):
         wpilib.CameraServer.launch()
 
         #ARM EXTENTION
-        self.extension = wpilib.AnalogInput(3)
+        self.extension = wpilib.AnalogInput(2)
+        self.psi = wpilib.AnalogInput(1)
+
+        print("AtRobotInitEnd")
 
     def teleopPeriodic(self):
         """Runs the motors with tank steering"""
@@ -231,14 +247,11 @@ class MyRobot(wpilib.TimedRobot):
         #print(self.joystick.getRawButtonPressed(1))
         
         #LIMELIGHT Variables
-        
         self.tx = self.lmtable.getNumber('tx', None)
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        self.displacement = self.navxer.getDisplacementX()
-        self.angle = self.navxer.getAngle()
-        self.yaw = self.navxer.getYaw()
+        
 
         self.limelightLensHeightInches = 14
 
@@ -253,7 +266,6 @@ class MyRobot(wpilib.TimedRobot):
         #arm extension to dashboard
         self.reach = armExtension(self.distance)
         self.sd.putNumber('reach', self.reach)
-
         
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
@@ -267,10 +279,13 @@ class MyRobot(wpilib.TimedRobot):
         if self.joystick.getRawButtonPressed(4):
             print("Button 4 Pressed")
             #print("solenoid value = ",self.doubleSolenoid.get())
-            # NAVX uses network tables as well 
-            print("Displacement X = ", self.displacement)
-            print("Yaw = ", self.yaw)  
-            print("Angle = ", self.angle)   
+            # NAVX uses network tables as well
+            self.getY = self.navxer.getRawAccelY()
+            self.angle = self.navxer.getAngle()
+            self.getX = self.navxer.getRawAccelX()
+            print("navx X = ", self.getX)
+            print("navx Y = ", self.getY)  
+            print("Anle = ", self.angle)  
         if self.joystick.getRawButtonPressed(5):
             print("Button 5 Pressed")
             '''
@@ -330,8 +345,10 @@ class MyRobot(wpilib.TimedRobot):
             print("arm_extension = ", armDistance)
         if self.controller.getRawButtonPressed(8):
             print("Controller button 8 pressed")
+            print("drivetrain = ", self.driveTrain)
         if self.controller.getRawButtonPressed(9):
             print("Controller button 9 pressed")
+            print("psi = ", self.psi.getValue())
         if self.controller.getRawButtonPressed(10):
             print("Controller buttone 10 pressed")
         '''
@@ -388,7 +405,7 @@ class MyRobot(wpilib.TimedRobot):
         self.yaw = self.navxer.getYaw()
 
         self.limelightLensHeightInches = 14
-
+        '''
         #target distance to dashborard
         self.distance = targetDistance(self.ta)
         self.sd.putNumber('tDistance', self.distance)
@@ -400,7 +417,8 @@ class MyRobot(wpilib.TimedRobot):
         #arm extension to dashboard
         self.reach = armExtension(self.distance)
         self.sd.putNumber('reach', self.reach)
-
+        '''
+        print ("InAutomousInit")
     def autonomousPeriodic(self):
         self.tx = self.lmtable.getNumber('tx', None)
         self.ty = self.lmtable.getNumber('ty', None)
@@ -417,12 +435,12 @@ class MyRobot(wpilib.TimedRobot):
         self.sd.putNumber('tDistance', self.distance)
 
         #target alignment pushing to dashboard
-        self.aim = targetAlignment(self.tx)
-        self.sd.putString('tAim', self.aim)
+        #self.aim = targetAlignment(self.tx)
+        #self.sd.putString('tAim', self.aim)
 
         #arm extension to dashboard
-        self.reach = armExtension(self.distance)
-        self.sd.putNumber('reach', self.reach)
+        #self.reach = armExtension(self.distance)
+        #self.sd.putNumber('reach', self.reach)
         """This function is called periodically during autonomous."""
         '''
         print("Autonomous Mode")
@@ -445,22 +463,38 @@ class MyRobot(wpilib.TimedRobot):
         #else:
          #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
 
-        if (self.distance >= 4):
+        #DISTANCE
+        '''
+        if (self.distance >= autoGo):
             self.driveTrain.arcadeDrive(0.5, 0)
-            if (self.distance  <= 3):
-                self.driveTrain.arcadeDrive(0, 0)
+        elif (self.distance <= autoStop):
+            self.driveTrain.arcadeDrive(0, 0)
         else:
             self.driveTrain.arcadeDrive(0, 0)
-        
-        #if (self.aim == 'unaligned'):
-        #   self.drive
+        '''
+        #self.driveTrain.arcadeDrive(x, y); x = forward, back/ y = right, left
+#        if (self.tx == 0):
+ #           self.driveTrain.arcadeDrive(0, -0.5)
+        #ALIGNMENT lim
+        if (self.tx > 3):
+            self.driveTrain.arcadeDrive(0, 0.5)
+            print("tx = ", self.tx)
+            #event.wait(0.05)
+        elif (self.tx < -3):
+            self.driveTrain.arcadeDrive(0, -0.5)
+            print("-tx =", self.tx)
+        else:
+            self.driveTrain.arcadeDrive(0, 0)
 
+''' 
+        if (abs(self.tx) > 1.0):
+            if (self.tx < 0):
+                steeringAdjust = kp * self.tx + min_command
+            else:
+                steeringAdjust = kp * self.tx - min_command
+            print("steering adj = ", steeringAdjust)
+'''        
 
-        
-            
-    
-    
-   
 '''
     def teleopPeriodic(self):
         """This function is called periodically during operator control."""
