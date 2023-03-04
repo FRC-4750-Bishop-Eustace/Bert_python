@@ -33,6 +33,12 @@ autoStop = 3.9
 kp = -0.1
 min_command = 0.05
 steeringAdjust = 0.0
+FrontLeftMotorPort = 0
+RearLeftMotorPort = 1
+FrontRightMotorPort = 15
+RearRightMotorPort = 14
+ArmExtensionMotorPort = 2
+AngleMotorPort = 12
 
 #for "event.wait" to work
 event = threading.Event()
@@ -224,7 +230,15 @@ class MyRobot(wpilib.TimedRobot):
         #ARM EXTENTION
         self.extension = wpilib.AnalogInput(2)
         self.psi = wpilib.AnalogInput(1)
+        
+        #navx micro for angles
+        self.angler = navx.AHRS.SerialDataType
 
+        self.armExtensionMotor = ctre.WPI_TalonSRX(2)
+        self.angleMotor = ctre.WPI_TalonSRX(12)
+
+
+          
         print("AtRobotInitEnd")
 
     def teleopPeriodic(self):
