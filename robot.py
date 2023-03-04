@@ -29,10 +29,11 @@ minTX = -1
 maxTX = 1
 autoGo = 4
 autoStop = 3.9
-
-kp = -0.1
-min_command = 0.05
-steeringAdjust = 0.0
+autoAimLeft = 3
+autoAimRight = -3
+#kp = -0.1
+#min_command = 0.05
+#steeringAdjust = 0.0
 
 #for "event.wait" to work
 event = threading.Event()
@@ -464,27 +465,25 @@ class MyRobot(wpilib.TimedRobot):
          #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
 
         #DISTANCE
-        '''
+        
         if (self.distance >= autoGo):
             self.driveTrain.arcadeDrive(0.5, 0)
         elif (self.distance <= autoStop):
             self.driveTrain.arcadeDrive(0, 0)
         else:
             self.driveTrain.arcadeDrive(0, 0)
-        '''
+        
         #self.driveTrain.arcadeDrive(x, y); x = forward, back/ y = right, left
-#        if (self.tx == 0):
- #           self.driveTrain.arcadeDrive(0, -0.5)
         #ALIGNMENT lim
-        if (self.tx > 3):
+        
+        if (self.tx > autoAimLeft):
             self.driveTrain.arcadeDrive(0, 0.5)
             print("tx = ", self.tx)
             #event.wait(0.05)
-        elif (self.tx < -3):
+        elif (self.tx < autoAimRight):
             self.driveTrain.arcadeDrive(0, -0.5)
             print("-tx =", self.tx)
-        else:
-            self.driveTrain.arcadeDrive(0, 0)
+
 
 ''' 
         if (abs(self.tx) > 1.0):
