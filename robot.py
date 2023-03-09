@@ -1,6 +1,8 @@
 import math
 import time
 import sys
+import logging
+import threading
 
 import wpilib
 import wpilib.drive
@@ -13,6 +15,7 @@ import logging
 import cscore
 
 import math
+
 
 #from networktables import NetworkTables
 
@@ -27,20 +30,33 @@ minTX = -1
 maxTX = 1
 autoGo = 4
 autoStop = 3.9
+autoAimLeft = 3
+autoAimRight = -3
 
+kp = -0.1
+min_command = 0.05
+steeringAdjust = 0.0
 
+FrontLeftMotorPort = 1
+RearLeftMotorPort = 2
+FrontRightMotorPort = 12
+RearRightMotorPort = 13
+ArmExtensionMotorPort = 2
+AngleMotorPort = 12
 
+#for "event.wait" to work
+event = threading.Event()
 
 #Distance equation
 def targetDistance(x):
-        a = 4.509
-        b = -0.5132
-        distance = 0
-        if x > 0:
-            distance = a * x ** b
-        else:
-            pass
-        return distance
+    a = 4.509
+    b = -0.5132
+    distance = 0
+    if x > 0:
+        distance = a * x ** b
+    else:
+        pass
+    return distance
 
 def targetAlignment(x):
     isTargetAligned = ''
@@ -61,6 +77,17 @@ def armExtension(x):
     else:
         distance = (runningTotal + distance)
     return distance
+
+def solenoidclaw(x):
+    isSolenoidClawOpen = 'undefined'
+    if (x==1):
+        #print ("Claw Open")
+        isSolenoidClawOpen = 'Open'
+    else:
+        #print ("Claw Close")
+        isSolenoidClawOpen = 'Close'
+    print('returningsolenoidclaw')
+    return isSolenoidClawOpen
 
 class MyRobot(wpilib.TimedRobot):
     def robotInit(self):
@@ -84,15 +111,17 @@ class MyRobot(wpilib.TimedRobot):
         self.frontRightMotor = wpilib.Talon(2)
         self.rearRightMotor = wpilib.Talon(1)
         '''
-        
-        self.frontLeftMotor = ctre.WPI_TalonSRX(0)
+        #
+        self.frontLeftMotor = ctre.WPI_TalonSRX(2)
         #self.frontLeftMotor.set(0.3)
         self.rearLeftMotor = ctre.WPI_TalonSRX(1)
         #self.rearLeftMotor.set(0.3)
-        self.frontRightMotor = ctre.WPI_TalonSRX(15)
+        self.frontRightMotor = ctre.WPI_TalonSRX(13)
         #self.frontRightMotor.set(0.3)
-        self.rearRightMotor = ctre.WPI_TalonSRX(14)
+        self.rearRightMotor = ctre.WPI_TalonSRX(12)
         #self.rearRightMotor.set(0.3)
+        self.armUpDown = ctre.WPI_TalonSRX(0)
+        self.armExtend = ctre.WPI_TalonSRX(14)
         '''
         self.frontLeftMotor = ctre.WPI_TalonSRX(0)
         #self.frontLeftMotor.set(0.3)
@@ -166,6 +195,10 @@ class MyRobot(wpilib.TimedRobot):
         # zero the sensor
         self.frontLeftMotor.setSelectedSensorPosition(0, self.kPIDLoopIdx, self.kTimeoutMs)
 
+        #SETTING CONFIG FOR ARM MOTORS
+        #self.armUpDown.set(0.5)
+        #self.armExtend.set(0.5)
+
         
         ## NETWORK TABLES
         self.inst = ntcore.NetworkTableInstance.getDefault()
@@ -173,6 +206,7 @@ class MyRobot(wpilib.TimedRobot):
         #self.inst = ntcore.NetworkTableInstance.create()
         self.sd = self.inst.getTable("SmartDashboard")
         self.lmtable = self.inst.getTable("limelight")
+        self.station = self.inst.getTable("FMSInfo")
         #self.lltable = ntcore.NetworkTableInstance
         
         ## DEFINE NAVX
@@ -219,6 +253,12 @@ class MyRobot(wpilib.TimedRobot):
         self.extension = wpilib.AnalogInput(2)
         self.psi = wpilib.AnalogInput(1)
 
+        #navx micro for angles
+        #self.angler = navx.AHRS.SerialDataType
+
+        #self.armExtensionMotor = ctre.WPI_TalonSRX(2)
+        #self.angleMotor = ctre.WPI_TalonSRX(12)
+
         print("AtRobotInitEnd")
 
     def teleopPeriodic(self):
@@ -241,12 +281,12 @@ class MyRobot(wpilib.TimedRobot):
         #print(self.joystick.getRawButtonPressed(1))
         
         #LIMELIGHT Variables
-        '''
         self.tx = self.lmtable.getNumber('tx', None)
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        
+        self.tid = self.lmtable.getNumber('tid', None)
+        #self.cl = self.lmtable.getNumber('cl', None)
 
         self.limelightLensHeightInches = 14
 
@@ -261,7 +301,6 @@ class MyRobot(wpilib.TimedRobot):
         #arm extension to dashboard
         self.reach = armExtension(self.distance)
         self.sd.putNumber('reach', self.reach)
-        '''
         
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
@@ -278,10 +317,10 @@ class MyRobot(wpilib.TimedRobot):
             # NAVX uses network tables as well
             self.getY = self.navxer.getRawAccelY()
             self.angle = self.navxer.getAngle()
-            self.getX = self.navxer.getRawAccelX() 
+            self.getX = self.navxer.getRawAccelX()
             print("navx X = ", self.getX)
             print("navx Y = ", self.getY)  
-            print("Anle = ", self.angle)   
+            print("Anle = ", self.angle)  
         if self.joystick.getRawButtonPressed(5):
             print("Button 5 Pressed")
             '''
@@ -309,7 +348,10 @@ class MyRobot(wpilib.TimedRobot):
             print("Limelight ty = ", self.ty)
             print("Limelight tx = ", self.tx)
             
-        self.driveTrain.arcadeDrive(-self.joystick.getY(), self.joystick.getX())
+        self.driveTrain.arcadeDrive(self.joystick.getY(), self.joystick.getX())
+
+        #CONTROLLER JOYSTICK
+        
         
         #CONTROLLER BUTTONS
         if self.controller.getRawButtonPressed(1):
@@ -324,6 +366,8 @@ class MyRobot(wpilib.TimedRobot):
             self.lmtable.putNumber('pipeline', 0)
         if self.controller.getRawButtonPressed(4):
             print("Controller button 4 pressed")
+            print("Setting to Camera mode")
+            self.lmtable.putNumber('pipeline', 2)
         if self.controller.getRawButtonPressed(5):
             print("Controller button 5 pressed")
             print("Setting to Peg Mode")
@@ -430,13 +474,9 @@ class MyRobot(wpilib.TimedRobot):
         self.distance = targetDistance(self.ta)
         self.sd.putNumber('tDistance', self.distance)
 
-        #target alignment pushing to dashboard
-        #self.aim = targetAlignment(self.tx)
-        #self.sd.putString('tAim', self.aim)
-
-        #arm extension to dashboard
-        #self.reach = armExtension(self.distance)
-        #self.sd.putNumber('reach', self.reach)
+        #set limelight to april tag mode
+        self.lmtable.putNumber('pipeline', 0)
+       
         """This function is called periodically during autonomous."""
         '''
         print("Autonomous Mode")
@@ -460,23 +500,36 @@ class MyRobot(wpilib.TimedRobot):
          #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
 
         #DISTANCE
-        '''
+        
         if (self.distance >= autoGo):
             self.driveTrain.arcadeDrive(0.5, 0)
         elif (self.distance <= autoStop):
             self.driveTrain.arcadeDrive(0, 0)
+            #event.wait(1)
         else:
             self.driveTrain.arcadeDrive(0, 0)
         
-        '''
         #self.driveTrain.arcadeDrive(x, y); x = forward, back/ y = right, left
-#        if (self.tx == 0):
- #           self.driveTrain.arcadeDrive(0, -0.5)
-        #ALIGNMENT lim 
-        if (self.tx >= 1):
-            self.driveTrain.arcadeDrive(0, 0.6)
-        elif (self.tx < 1):
-            self.driveTrain.arcadeDrive(0, 0)
+        #ALIGNMENT lim
+        
+        if (self.tx > autoAimLeft):
+            self.driveTrain.arcadeDrive(0, 0.5)
+            print("tx = ", self.tx)
+            #event.wait(0.05)
+        elif (self.tx < autoAimRight):
+            self.driveTrain.arcadeDrive(0, -0.5)
+            print("-tx =", self.tx)
+
+
+
+''' 
+        if (abs(self.tx) > 1.0):
+            if (self.tx < 0):
+                steeringAdjust = kp * self.tx + min_command
+            else:
+                steeringAdjust = kp * self.tx - min_command
+            print("steering adj = ", steeringAdjust)
+'''        
 
 '''
     def teleopPeriodic(self):
