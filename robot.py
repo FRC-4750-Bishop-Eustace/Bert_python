@@ -112,16 +112,16 @@ class MyRobot(wpilib.TimedRobot):
         self.rearRightMotor = wpilib.Talon(1)
         '''
         #
-        self.frontLeftMotor = ctre.WPI_TalonSRX(2)
+        self.frontLeftMotor = ctre.WPI_TalonSRX(15)
         #self.frontLeftMotor.set(0.3)
         self.rearLeftMotor = ctre.WPI_TalonSRX(1)
         #self.rearLeftMotor.set(0.3)
-        self.frontRightMotor = ctre.WPI_TalonSRX(13)
+        self.frontRightMotor = ctre.WPI_TalonSRX(14)
         #self.frontRightMotor.set(0.3)
-        self.rearRightMotor = ctre.WPI_TalonSRX(12)
+        self.rearRightMotor = ctre.WPI_TalonSRX(5)
         #self.rearRightMotor.set(0.3)
-        self.armUpDown = ctre.WPI_TalonSRX(0)
-        self.armExtend = ctre.WPI_TalonSRX(14)
+        self.armUpDown = ctre.WPI_TalonSRX(2)
+        self.armExtend = ctre.WPI_TalonSRX(0)
         '''
         self.frontLeftMotor = ctre.WPI_TalonSRX(0)
         #self.frontLeftMotor.set(0.3)
@@ -152,9 +152,9 @@ class MyRobot(wpilib.TimedRobot):
         self.timer = wpilib.Timer()
 
          ## SOLENOID TESTING
-        self.doubleSolenoid = wpilib.DoubleSolenoid(3,wpilib.PneumaticsModuleType.CTREPCM, 1,2)
-        kForward = 1
-        kOff = 0
+        self.doubleSolenoid = wpilib.DoubleSolenoid(3,wpilib.PneumaticsModuleType.CTREPCM, 4,5)
+        kForward = 5
+        kOff = 4
         kReverse = 2
         
         ## DEFINE COMPRESSOR
@@ -351,7 +351,25 @@ class MyRobot(wpilib.TimedRobot):
         self.driveTrain.arcadeDrive(self.joystick.getY(), self.joystick.getX())
 
         #CONTROLLER JOYSTICK
-        
+        self.PadX = self.controller.getX()
+        self.PadY = self.controller.getY()
+        #controls up down
+        if (self.PadY == 0):
+            self.armUpDown.set(0.0)
+        if (self.PadY == 1):
+            self.armUpDown.set(0.9)
+        if (self.PadY == -1):
+            self.armUpDown.set(-0.9)
+        #controls extend (negive is joy stick moving left: positive is joystick moving right)
+        if (self.PadX == 0):
+            self.armExtend.set(0)
+        if (self.PadX == -1):
+            self.armExtend.set(0.9)
+        if (self.PadX == 1):
+            self.armExtend.set(-0.9)
+
+        #print("X =", self.PadX)
+        #print("Y =", self.PadY)
         
         #CONTROLLER BUTTONS
         if self.controller.getRawButtonPressed(1):
