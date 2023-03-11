@@ -89,6 +89,16 @@ def solenoidclaw(x):
     print('returningsolenoidclaw')
     return isSolenoidClawOpen
 
+def pressure_status(x):
+    y = 0
+    if (x < 388):
+        y = 0
+    elif 388 <= x < 392:
+        y = 1
+    if x >= 392:
+        y = 2
+    return y
+
 class MyRobot(wpilib.TimedRobot):
     def robotInit(self):
         print("AtRobotInitBeginning")
@@ -170,12 +180,22 @@ class MyRobot(wpilib.TimedRobot):
         #self.rearRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.QuadEncoder, 0, 0)
         #self.rearRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Relative, 0, 0)
         #self.rearRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0)
-        self.frontLeftMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0,)
-        self.frontLeftMotor.setSensorPhase(True)
-        self.frontLeftMotor.setSelectedSensorPosition(100,0,0)
+        
+        # Drive Encoder 1
+        self.rearLeftMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0,)
+        self.rearLeftMotor.setSensorPhase(True)
+        self.rearLeftMotor.setSelectedSensorPosition(100,0,0)
+
+        # Drive Encoder 2
+        self.frontRightMotor.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0,)
+        self.frontRightMotor.setSensorPhase(True)
+        self.frontRightMotor.setSelectedSensorPosition(100,0,0)
         # Set relevant frame periods to be at least as fast as periodic rate
         ##self.rearRightMotor.setStatusFramePeriod(ctre.WPI_TalonSRX.StatusFrameEnhanced.Status_13_Base_PIDF0, 10, 0)
         ##self.rearRightMotor.setStatusFramePeriod(ctre.WPI_TalonSRX.StatusFrameEnhanced.Status_10_MotionMagic, 10, self.kTimeoutMs)
+        self.armUpDown.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0,)
+        self.armUpDown.setSensorPhase(True)
+        self.armUpDown.setSelectedSensorPosition(100,0,0)
 
         # set the peak and nominal outputs
         self.frontLeftMotor.configNominalOutputForward(0, self.kTimeoutMs)
@@ -250,11 +270,16 @@ class MyRobot(wpilib.TimedRobot):
         wpilib.CameraServer.launch()
 
         #ARM EXTENTION
-        self.extension = wpilib.AnalogInput(2)
-        self.psi = wpilib.AnalogInput(1)
+        #self.extension = wpilib.AnalogInput(0)
+
+        #PSI SENSOR
+        self.psi = wpilib.AnalogInput(2)
 
         #navx micro for angles
-        #self.angler = navx.AHRS.SerialDataType
+        self.angler = navx.AHRS.create_i2c(wpilib.I2C.Port.kOnboard)
+
+        self.armExtensionMotor = ctre.WPI_TalonSRX(ArmExtensionMotorPort)
+        self.angleMotor = ctre.WPI_TalonSRX(AngleMotorPort)
 
         #self.armExtensionMotor = ctre.WPI_TalonSRX(2)
         #self.angleMotor = ctre.WPI_TalonSRX(12)
@@ -302,6 +327,19 @@ class MyRobot(wpilib.TimedRobot):
         self.reach = armExtension(self.distance)
         self.sd.putNumber('reach', self.reach)
         
+        #temp encoder values to dashboard
+        self.sd.putNumber('arm up down', self.armUpDown.getSelectedSensorPosition(0))
+        self.sd.putNumber('rear left', self.rearLeftMotor.getSelectedSensorPosition(0))
+        self.sd.putNumber('front right', self.frontRightMotor.getSelectedSensorPosition(0))
+
+        #psi status to dashboard
+        self.psi_status = pressure_status(self.psi.getValue())
+        self.sd.putNumber('pressureStatus', self.psi_status)
+
+        #navx angle to dashboard
+        self.armangle = self.angler.getAngle()
+        self.sd.putNumber('armAngle', self.armangle)
+
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
@@ -336,7 +374,10 @@ class MyRobot(wpilib.TimedRobot):
             print("Sensor Collection Quad Velocity = ", sensorreadout.getQuadratureVelocity)
             '''
             # Encoder Testing
-            print("Sensor Position", self.frontLeftMotor.getSelectedSensorPosition(0))
+            #print("Sensor Position", self.frontLeftMotor.getSelectedSensorPosition(0))
+            print("arm", self.armUpDown.getSelectedSensorPosition(0))
+            print("left", self.rearLeftMotor.getSelectedSensorPosition(0))
+            print("right", self.frontRightMotor.getSelectedSensorPosition(0))
         if self.joystick.getRawButtonPressed(6):
             print("Button 6 Pressed")
             self.compressor.disable()
@@ -409,6 +450,9 @@ class MyRobot(wpilib.TimedRobot):
             print("psi = ", self.psi.getValue())
         if self.controller.getRawButtonPressed(10):
             print("Controller buttone 10 pressed")
+            #print("y_angle = ", self.angler.getAngle)
+            #print("y_angleDisplacement = ", self.angler.getDisplacementY)
+            #print("y_angleAdjustment = ", self.angler.getAngleAdjustment)
         '''
         if self.tx == 0:
             print("Aligned")
