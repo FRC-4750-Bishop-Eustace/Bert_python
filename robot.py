@@ -30,8 +30,8 @@ minTX = -1
 maxTX = 1
 autoGo = 4
 autoStop = 3.9
-autoAimLeft = 3
-autoAimRight = -3
+autoAimLeft = 4
+autoAimRight = -4
 
 kp = -0.1
 min_command = 0.05
@@ -43,6 +43,7 @@ FrontRightMotorPort = 12
 RearRightMotorPort = 13
 ArmExtensionMotorPort = 2
 AngleMotorPort = 12
+
 
 #for "event.wait" to work
 event = threading.Event()
@@ -67,6 +68,10 @@ def targetAlignment(x):
         #print("unaligned")
         isTargetAligned = 'Unaligned'
     return isTargetAligned
+
+def ArmAngle(x):
+    y = x - 118.3/-103.5
+    return y
 
 def armExtension(x):
     runningTotal = 0
@@ -136,30 +141,34 @@ class MyRobot(wpilib.TimedRobot):
         self.frontLeftMotor = ctre.WPI_TalonSRX(0)
         #self.frontLeftMotor.set(0.3)
         self.rearLeftMotor = ctre.WPI_TalonSRX(1)
-        #self.rearLeftMotor.set(0.3)
+        #self.rearLeftMotor/.set(0.3)
         self.frontRightMotor = ctre.WPI_TalonSRX(15)
         #self.frontRightMotor.set(0.3)
         self.rearRightMotor = ctre.WPI_TalonSRX(14)
-        #self.rearRightMotor.set(0.3)
+        self.rearRightMotor.set(0.3)
         '''
         self.m_left = wpilib.MotorControllerGroup(self.frontLeftMotor, self.rearLeftMotor)
         self.m_right = wpilib.MotorControllerGroup(self.frontRightMotor, self.rearRightMotor)
         
         self.m_left.setInverted(True)
+        #self.m_left.setVoltage(5)
+        #self.m_right.setVoltage(7)
 
         #self.myRobot = DifferentialDrive(self.left, self.right)
         #self.myRobot.setExpiration(0.1)
         
         #self.myRobot = wpilib.drive.DifferentialDrive(self.left, self.right)
         self.driveTrain = wpilib.drive.DifferentialDrive(self.m_left, self.m_right)
+        #self.driveTrain.WheelSpeeds()
         self.driveTrain.setExpiration(0.1)
         #self.myRobot.setExpiration(0.1)
 
         # joysticks 1 & 2 on the driver station
         self.joystick = wpilib.Joystick(0)
         self.controller = wpilib.Joystick(1)
-        #self.rightStick = wpilib.Joystick(1)
         self.timer = wpilib.Timer()
+
+        self.claw = 0
 
          ## SOLENOID TESTING
         self.doubleSolenoid = wpilib.DoubleSolenoid(3,wpilib.PneumaticsModuleType.CTREPCM, 4,5)
@@ -171,6 +180,8 @@ class MyRobot(wpilib.TimedRobot):
         self.compressor = wpilib.Compressor(3,wpilib.PneumaticsModuleType.CTREPCM)
         
         ## ENCODER DEFINITION
+        self.UpDownEncoder = self.armUpDown.getSelectedSensorPosition(0)
+        self.ExtendEncoder = self.armExtend.getSelectedSensorPosition(0)
         
         # Encoder Testing
         self.kTimeoutMs = 0
@@ -197,6 +208,12 @@ class MyRobot(wpilib.TimedRobot):
         self.armUpDown.setSensorPhase(True)
         self.armUpDown.setSelectedSensorPosition(100,0,0)
 
+        #encoder for extention
+        self.armExtend.configSelectedFeedbackSensor(ctre.FeedbackDevice.CTRE_MagEncoder_Absolute, 0, 0,)
+        self.armExtend.setSensorPhase(True)
+        self.armExtend.setSelectedSensorPosition(100,0,0)
+
+
         # set the peak and nominal outputs
         self.frontLeftMotor.configNominalOutputForward(0, self.kTimeoutMs)
         self.frontLeftMotor.configNominalOutputReverse(0, self.kTimeoutMs)
@@ -214,10 +231,6 @@ class MyRobot(wpilib.TimedRobot):
         self.frontLeftMotor.configMotionAcceleration(6000, self.kTimeoutMs)
         # zero the sensor
         self.frontLeftMotor.setSelectedSensorPosition(0, self.kPIDLoopIdx, self.kTimeoutMs)
-
-        #SETTING CONFIG FOR ARM MOTORS
-        #self.armUpDown.set(0.5)
-        #self.armExtend.set(0.5)
 
         
         ## NETWORK TABLES
@@ -237,27 +250,6 @@ class MyRobot(wpilib.TimedRobot):
         #print("I2C address only {}".format(wpilib.I2C.addressOnly()))
         
         ## DEFINE LIMELIGHT
-        '''
-        table = NetworkTables.getTable("limelight")
-        tx = table.getNumber('tx', None)
-        ty = table.getNumber('ty', None)
-        ta = table.getNumber('ta', None)
-        ts = table.getNumber('ts', None)
-        '''
-        '''
-        self.tx = NetworkTable.getNumber('tx', None)
-        self.ty = NetworkTable.getNumber('ty', None)
-        self.ta = NetworkTable.getNumber('ta', None)
-        self.ts = NetworkTable.getNumber('ts', None)
-        '''
-        #self.table = ntcore.NetworkTableInstance()
-        #self.table1 = self.table.getTable('limelight')
-        '''
-        self.tx = self.lmtable.getNumber('tx', None)
-        self.ty = self.lmtable.getNumber('ty', None)
-        self.ta = self.lmtable.getNumber('ta', None)
-        self.ts = self.lmtable.getNumber('ts', None)
-        '''
         # Mr. Carlin's genius helped find this "da" moment, had to add the call to teleop
         
         #"""Executed at the start of teleop mode"""
@@ -274,6 +266,9 @@ class MyRobot(wpilib.TimedRobot):
 
         #PSI SENSOR
         self.psi = wpilib.AnalogInput(2)
+
+        #EXTENTION SENSOR
+        self.armStop = wpilib.AnalogInput(1)
 
         #navx micro for angles
         self.angler = navx.AHRS.create_i2c(wpilib.I2C.Port.kOnboard)
@@ -324,13 +319,14 @@ class MyRobot(wpilib.TimedRobot):
         self.sd.putString('tAim', self.aim)
 
         #arm extension to dashboard
-        self.reach = armExtension(self.distance)
-        self.sd.putNumber('reach', self.reach)
+        self.armStopValue = self.armStop.getValue()
+        self.sd.putNumber('arm length', self.armStopValue)
         
         #temp encoder values to dashboard
         self.sd.putNumber('arm up down', self.armUpDown.getSelectedSensorPosition(0))
         self.sd.putNumber('rear left', self.rearLeftMotor.getSelectedSensorPosition(0))
         self.sd.putNumber('front right', self.frontRightMotor.getSelectedSensorPosition(0))
+        #self.sd.putNumber('extend arm', self.armExtend.getSelectedSensorPosition(0))
 
         #psi status to dashboard
         self.psi_status = pressure_status(self.psi.getValue())
@@ -340,15 +336,26 @@ class MyRobot(wpilib.TimedRobot):
         self.armangle = self.angler.getAngle()
         self.sd.putNumber('armAngle', self.armangle)
 
+        #arm extention flag
+        self.armLength = 0
+        if (self.armStopValue > 710):
+            self.armLength = 1
+        if (self.armStopValue < 710):
+            self.armLength = 0
+        
+
+
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
-            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
+            #self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
         if self.joystick.getRawButtonPressed(2):
             print("Button 2 Pressed")
-            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kOff)
+            #self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kOff)
+            self.driveTrain.curvatureDrive(self.joystick.getY(), self.joystick.getRawAxis(3) * 1/2, True)
         if self.joystick.getRawButtonPressed(3):
             print("Button 3 Pressed")
-            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
+            #self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
+            self.driveTrain.curvatureDrive(self.joystick.getY(), self.joystick.getRawAxis(3) * 1/2, True)
         if self.joystick.getRawButtonPressed(4):
             print("Button 4 Pressed")
             #print("solenoid value = ",self.doubleSolenoid.get())
@@ -384,12 +391,9 @@ class MyRobot(wpilib.TimedRobot):
         if self.joystick.getRawButtonPressed(7):
             #Limelight
             print("Button 7 Pressed")
-            print("Limelight ta = ", self.ta)
-            print("Limelight ts = ", self.ts)
-            print("Limelight ty = ", self.ty)
-            print("Limelight tx = ", self.tx)
             
-        self.driveTrain.arcadeDrive(self.joystick.getY(), self.joystick.getX())
+        
+        self.driveTrain.curvatureDrive(self.joystick.getY(), self.joystick.getRawAxis(3) * 1/2, True)
 
         #CONTROLLER JOYSTICK
         self.PadX = self.controller.getX()
@@ -402,12 +406,32 @@ class MyRobot(wpilib.TimedRobot):
         if (self.PadY == -1):
             self.armUpDown.set(-0.9)
         #controls extend (negive is joy stick moving left: positive is joystick moving right)
-        if (self.PadX == 0):
-            self.armExtend.set(0)
-        if (self.PadX == -1):
-            self.armExtend.set(0.9)
-        if (self.PadX == 1):
-            self.armExtend.set(-0.9)
+        if (self.armLength == 0):
+            if (self.PadX == 0):
+                self.armExtend.set(0)
+            if (self.PadX == -1):
+                self.armExtend.set(0.9)
+            if (self.PadX == 1):
+                self.armExtend.set(-0.9)
+        #stop the arm extension if its fully closed
+        if (self.armLength == 1):
+            if (self.PadX == 0):
+                self.armExtend.set(0)
+            if (self.PadX == -1):
+                self.armExtend.set(0.9)
+            if (self.PadX == 1):
+                self.armExtend.set(0.0)
+        #controls can be reversed if spool spins to much
+        if (self.PadX == -1 and self.armLength == 1):
+            if (self.PadX == 0):
+                self.armExtend.set(0)
+            if (self.PadX == -1):
+                self.armExtend.set(0.0)
+            if (self.PadX == 1):
+                self.armExtend.set(0.9)
+        
+        
+
 
         #print("X =", self.PadX)
         #print("Y =", self.PadY)
@@ -415,44 +439,57 @@ class MyRobot(wpilib.TimedRobot):
         #CONTROLLER BUTTONS
         if self.controller.getRawButtonPressed(1):
             print("Controller button 1 pressed")
-            self.lmtable.putNumber('ledMode', 1)
+            #print("distance sensor = ", self.armStop.getValue())
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
         if self.controller.getRawButtonPressed(2):
             print("Controller button 2 pressed")
-            self.lmtable.putNumber('ledMode', 3)
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
         if self.controller.getRawButtonPressed(3):
             print("Controller button 3 pressed")
-            print("Setting to April Tag Mode")
-            self.lmtable.putNumber('pipeline', 0)
+            self.armUpDown.set(0.5)
+            if (self.armangle < -490):
+                self.armUpDown.set(0.0)
         if self.controller.getRawButtonPressed(4):
             print("Controller button 4 pressed")
-            print("Setting to Camera mode")
-            self.lmtable.putNumber('pipeline', 2)
         if self.controller.getRawButtonPressed(5):
             print("Controller button 5 pressed")
-            print("Setting to Peg Mode")
-            self.lmtable.putNumber('pipeline', 1)
+            #temp code to raise arm
+            #self.armExtend.set(0.9)
         if self.controller.getRawButtonPressed(6):
             print("Controller button 6 pressed")
-            if (self.tx >= -1):
-                print("Aligned")
-            else:
-                print("unaligned")
+            #temp code to extend arm
+            #switches to peg mode
+            #print("Setting to Peg Mode")
+            #self.lmtable.putNumber('pipeline', 1)
         if self.controller.getRawButtonPressed(7):
             print("Controller button 7 pressed")
-            #print("extension_value", self.extension.getValue())
-            armDistance = armExtension(self.extension.getValue())
-            print("arm_extension = ", armDistance)
+            #switches to regluar camera mode
+            print("Setting to Camera mode")
+            self.lmtable.putNumber('pipeline', 2)
         if self.controller.getRawButtonPressed(8):
             print("Controller button 8 pressed")
-            print("drivetrain = ", self.driveTrain)
+            #sets to april tag mode
+            print("Setting to April Tag Mode")
+            self.lmtable.putNumber('pipeline', 0)
         if self.controller.getRawButtonPressed(9):
             print("Controller button 9 pressed")
-            print("psi = ", self.psi.getValue())
+            #turns limelight on
+            self.lmtable.putNumber('ledMode', 3)
         if self.controller.getRawButtonPressed(10):
             print("Controller buttone 10 pressed")
-            #print("y_angle = ", self.angler.getAngle)
-            #print("y_angleDisplacement = ", self.angler.getDisplacementY)
-            #print("y_angleAdjustment = ", self.angler.getAngleAdjustment)
+            #turns limelight off
+            self.lmtable.putNumber('ledMode', 1)
+        #R2/RT grey button
+        if self.controller.getRawAxis(3):
+            print("r2 pressed")
+            if (self.armLength == 0):
+                self.armExtend.set(-0.9)
+            elif (self.armLength == 1):
+                self.armExtend.set(0.0)
+        #L2/LT grey button  
+        if self.controller.getRawAxis(2):
+            self.armExtend.set(0.9) 
+
         '''
         if self.tx == 0:
             print("Aligned")
@@ -564,7 +601,7 @@ class MyRobot(wpilib.TimedRobot):
         #DISTANCE
         
         if (self.distance >= autoGo):
-            self.driveTrain.arcadeDrive(0.5, 0)
+            self.driveTrain.arcadeDrive(-0.7, 0)
         elif (self.distance <= autoStop):
             self.driveTrain.arcadeDrive(0, 0)
             #event.wait(1)
@@ -575,11 +612,11 @@ class MyRobot(wpilib.TimedRobot):
         #ALIGNMENT lim
         
         if (self.tx > autoAimLeft):
-            self.driveTrain.arcadeDrive(0, 0.5)
+            self.driveTrain.arcadeDrive(0, 0.6)
             print("tx = ", self.tx)
             #event.wait(0.05)
         elif (self.tx < autoAimRight):
-            self.driveTrain.arcadeDrive(0, -0.5)
+            self.driveTrain.arcadeDrive(0, -0.6)
             print("-tx =", self.tx)
 
 
