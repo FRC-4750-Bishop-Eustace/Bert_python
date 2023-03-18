@@ -46,6 +46,7 @@ AngleMotorPort = 12
 
 ArmStopVar = 500
 ArmLengthVar = 750
+ArmAngleAutoVar = -450
 
 #for "event.wait" to work
 event = threading.Event()
@@ -284,6 +285,8 @@ class MyRobot(wpilib.TimedRobot):
 
         self.armDirection = 1
 
+        self.clawStatus = 0
+
         print("AtRobotInitEnd")
 
     def teleopPeriodic(self):
@@ -341,6 +344,15 @@ class MyRobot(wpilib.TimedRobot):
         self.armangle = self.angler.getAngle()
         self.sd.putNumber('armAngle', self.armangle)
 
+        #claw open or close dashboard
+        '''
+        self.clawDash = 'close'
+        if (self.clawStatus == 0):
+            self.clawDash = 'close'
+        if (self.clawStatus == 1):
+            self.clawDash == 'open'
+        self.sd.putString('Claw', self.clawDash)
+        '''
         #arm extention flag
         self.armLength = 0
         if (self.armStopValue > ArmLengthVar):
@@ -351,6 +363,9 @@ class MyRobot(wpilib.TimedRobot):
         #getting arm extention values
         self.armStopValue0 = self.armStop.getValue()
         self.armStopValue1 = self.armStop.getValue()
+
+        #get claw status
+        self.clawStatus = 0
 
         if self.joystick.getRawButtonPressed(1):
             print("Button 1 Pressed")
@@ -398,37 +413,40 @@ class MyRobot(wpilib.TimedRobot):
         if self.joystick.getRawButtonPressed(7):
             #Limelight
             print("Button 7 Pressed")
+            self.PadY = self.controller.getRawAxis(1)
+            print("joystick =", self.PadY)
             
         
         self.driveTrain.curvatureDrive(self.joystick.getY(), self.joystick.getRawAxis(3) * 1/2, True)
 
         #CONTROLLER JOYSTICK
-        #self.PadX = self.controller.getX()
-        self.PadY = self.controller.getY()
+        self.PadX = self.controller.getRawAxis(3)
+        self.PadY = self.controller.getRawAxis(1)
         #controls up down
-        if (self.PadY == 0):
+        if (self.PadY == 1):
+            self.armUpDown.set(1.2)
+        elif (self.PadY == -1):
+            self.armUpDown.set(-1.2)
+        else:
             self.armUpDown.set(0.0)
-        if (self.PadY > 0):
-            self.armUpDown.set(0.9)
-        if (self.PadY < 0):
-            self.armUpDown.set(-0.9)
-        '''
+        
         #controls extend (negive is joy stick moving left: positive is joystick moving right)
         if (self.armLength == 0):
-            if (self.PadX == 0):
-                self.armExtend.set(0)
             if (self.PadX == -1):
                 self.armExtend.set(0.9)
-            if (self.PadX == 1):
+            elif (self.PadX == 1):
                 self.armExtend.set(-0.9)
+            else:
+                self.armExtend.set(0.0)
         #stop the arm extension if its fully closed
         if (self.armLength == 1):
-            if (self.PadX == 0):
-                self.armExtend.set(0)
             if (self.PadX == -1):
-                self.armExtend.set(0.9)
-            if (self.PadX == 1):
                 self.armExtend.set(0.0)
+            elif (self.PadX == 1):
+                self.armExtend.set(0.9)
+            else:
+                self.armExtend.set(0.0)
+        '''
         #controls can be reversed if spool spins to much
         if (self.PadX == -1 and self.armLength == 1):
             if (self.PadX == 0):
@@ -445,15 +463,11 @@ class MyRobot(wpilib.TimedRobot):
         #print("Y =", self.PadY)
         
         #CONTROLLER BUTTONS
-        if self.controller.getRawButtonPressed(1):
+        if self.controller.getAButtonPressed():
             print("Controller button 1 pressed")
-            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
-        if self.controller.getRawButtonPressed(2):
+            #self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
+        if self.controller.getXButtonPressed():
             print("Controller button 2 pressed")
-            if (self.armLength == 0):
-                self.armExtend.set(-0.9)
-            elif (self.armLength == 1):
-                self.armExtend.set(0.0)
             '''
             self.armStopValue0 = self.armStop.getValue()
             self.armExtend.set(-0.9)
@@ -464,16 +478,15 @@ class MyRobot(wpilib.TimedRobot):
             if self.armStopValue1 > ArmStopVar and self.armStopValue1 > self.armStopValue0:
                 self.armDirection = 1
             '''
-        if self.controller.getRawButtonPressed(3):
+        if self.controller.getBButtonPressed():
             print("Controller button 3 pressed")
-            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
+            #self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
             '''
             self.armUpDown.set(0.5)
             if (self.armangle < -490):
                 self.armUpDown.set(0.0)
             '''
-        if self.controller.getRawButtonPressed(4):
-            self.armExtend.set(0.9)
+        if self.controller.getYButtonPressed():
             '''
             self.armStopValue0 = self.armStop.getValue()
             self.armExtend.set(0.9)
@@ -496,23 +509,29 @@ class MyRobot(wpilib.TimedRobot):
             #self.lmtable.putNumber('pipeline', 1)
         if self.controller.getRawButtonPressed(7):
             print("Controller button 7 pressed")
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
+            #self.clawStatus = 0
+            self.sd.putString('Claw', '')
             #switches to regluar camera mode
-            print("Setting to Camera mode")
-            self.lmtable.putNumber('pipeline', 2)
+            #print("Setting to Camera mode")
+            #self.lmtable.putNumber('pipeline', 2)
         if self.controller.getRawButtonPressed(8):
             print("Controller button 8 pressed")
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
+            #self.clawStatus = 1
+            self.sd.putString('Claw', ' X')
             #sets to april tag mode
-            print("Setting to April Tag Mode")
-            self.lmtable.putNumber('pipeline', 0)
+            #print("Setting to April Tag Mode")
+            #self.lmtable.putNumber('pipeline', 0)
         if self.controller.getRawButtonPressed(9):
             print("Controller button 9 pressed")
             #turns limelight on
-            self.lmtable.putNumber('ledMode', 3)
+            #self.lmtable.putNumber('ledMode', 3)
         if self.controller.getRawButtonPressed(10):
             print("Controller buttone 10 pressed")
             #turns limelight off
-            self.lmtable.putNumber('ledMode', 1)
-        
+            #self.lmtable.putNumber('ledMode', 1)
+    
 
 
 
@@ -554,6 +573,10 @@ class MyRobot(wpilib.TimedRobot):
         self.yaw = self.navxer.getYaw()
 
         self.limelightLensHeightInches = 14
+
+        self.angler = navx.AHRS.create_i2c(wpilib.I2C.Port.kOnboard)
+
+        self.AutoState = 0
         '''
         #target distance to dashborard
         self.distance = targetDistance(self.ta)
@@ -569,6 +592,7 @@ class MyRobot(wpilib.TimedRobot):
         '''
         print ("InAutomousInit")
     def autonomousPeriodic(self):
+        self.timer.start()
         self.tx = self.lmtable.getNumber('tx', None)
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
@@ -585,6 +609,10 @@ class MyRobot(wpilib.TimedRobot):
 
         #set limelight to april tag mode
         self.lmtable.putNumber('pipeline', 0)
+
+        self.armangle = self.angler.getAngle()
+
+        self.armStop = wpilib.AnalogInput(1)
        
         """This function is called periodically during autonomous."""
         '''
@@ -604,12 +632,12 @@ class MyRobot(wpilib.TimedRobot):
         #time.sleep(0.5)
         #self.driveTrain.arcadeDrive(0, 0) 
         #if self.timer.get() < 2.0:
-        #    self.driveTrain.arcadeDrive(-0.5, 0)  # Drive forwards at half speed
+        #   self.driveTrain.arcadeDrive(-0.7, 0)  # Drive forwards at half speed
         #else:
-         #   self.driveTrain.arcadeDrive(0, 0)  # Stop robot
+        #    self.driveTrain.arcadeDrive(0, 0)  # Stop robot
 
         #DISTANCE
-        
+        '''
         if (self.distance >= autoGo):
             self.driveTrain.arcadeDrive(-0.7, 0)
         elif (self.distance <= autoStop):
@@ -628,7 +656,43 @@ class MyRobot(wpilib.TimedRobot):
         elif (self.tx < autoAimRight):
             self.driveTrain.arcadeDrive(0, -0.6)
             print("-tx =", self.tx)
+        '''
+        
+        if (self.AutoState == 0):
+            self.armUpDown.set(0.5)
+            if (self.armangle < ArmAngleAutoVar):
+                self.armUpDown.set(0.0)
+                self.AutoState = 1
+                self.AutoState1Complete = self.timer.get()
+        if (self.AutoState == 1):
+            self.AutoState2 = self.timer.get() - self.AutoState1Complete
+            if self.AutoState2 < 3.0:
+                self.armExtend.set(0.5)
+            else:
+                self.armExtend.set(0.0)
+                self.AutoState2Complete = self.timer.get()
+                self.AutoState = 2
+        if (self.AutoState == 2):
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
+            event.wait(1)
+            self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
+            self.AutoState == 3
+        if (self.AutoState == 3):
+            self.armExtend.set(-0.5)
+            if (self.armStop )
 
+
+
+            
+
+        
+
+
+        
+
+            
+
+        
 
 
 ''' 
