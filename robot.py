@@ -45,9 +45,9 @@ ArmExtensionMotorPort = 2
 AngleMotorPort = 12
 
 ArmStopVar = 500
-ArmLengthVar = 750
-ArmAngleAutoVar = -450
-
+ArmLengthVar = 660
+ArmLengthWarning = 600
+ArmAngleAutoVar = -1500
 #for "event.wait" to work
 event = threading.Event()
 
@@ -360,6 +360,13 @@ class MyRobot(wpilib.TimedRobot):
         if (self.armStopValue < ArmLengthVar):
             self.armLength = 0
         
+        #arm extention flag for not dragging on the ground
+        if (self.armStopValue > ArmLengthWarning):
+            self.sd.putString('ArmStatus', '')
+        if (self.armStopValue < ArmLengthWarning):
+            self.sd.putString('ArmStatus', 'WARN')
+
+            
         #getting arm extention values
         self.armStopValue0 = self.armStop.getValue()
         self.armStopValue1 = self.armStop.getValue()
@@ -610,7 +617,10 @@ class MyRobot(wpilib.TimedRobot):
         #set limelight to april tag mode
         self.lmtable.putNumber('pipeline', 0)
 
-        self.armangle = self.angler.getAngle()
+        #self.armangle = self.angler.getAngle()
+
+        #get arm postion using encoder
+        self.armangle = self.armUpDown.getSelectedSensorPosition(0)
 
         self.armStop = wpilib.AnalogInput(1)
        
@@ -659,11 +669,17 @@ class MyRobot(wpilib.TimedRobot):
         '''
         
         if (self.AutoState == 0):
-            self.armUpDown.set(0.5)
+            self.armUpDown.set(-0.5)
+            event.wait(2)
+            self.armUpDown.set(0.0)
+            self.AutoState = 1
+            self.AutoState1Complete = self.timer.get()
+            '''
             if (self.armangle < ArmAngleAutoVar):
                 self.armUpDown.set(0.0)
                 self.AutoState = 1
                 self.AutoState1Complete = self.timer.get()
+            '''
         if (self.AutoState == 1):
             self.AutoState2 = self.timer.get() - self.AutoState1Complete
             if self.AutoState2 < 3.0:
@@ -676,25 +692,12 @@ class MyRobot(wpilib.TimedRobot):
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
             event.wait(1)
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
-            self.AutoState == 3
+            self.AutoState = 3
         if (self.AutoState == 3):
             self.armExtend.set(-0.5)
-            if (self.armStop )
-
-
-
-            
-
-        
-
-
-        
-
-            
-
-        
-
-
+        elif (self.armExtend == 1):
+            self.armExtend.set(0.0)
+            self.AutoState = 4
 ''' 
         if (abs(self.tx) > 1.0):
             if (self.tx < 0):
