@@ -485,25 +485,17 @@ class MyRobot(wpilib.TimedRobot):
             if self.armStopValue1 > ArmStopVar and self.armStopValue1 > self.armStopValue0:
                 self.armDirection = 1
             '''
+        # b and y are to bring the arm in and out
         if self.controller.getBButtonPressed():
             print("Controller button 3 pressed")
-            #self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
-            '''
-            self.armUpDown.set(0.5)
-            if (self.armangle < -490):
-                self.armUpDown.set(0.0)
-            '''
+            self.armExtend.set(-0.9)
+        if self.controller.getBButtonReleased():
+            self.armExtend.set(0.0)
         if self.controller.getYButtonPressed():
-            '''
-            self.armStopValue0 = self.armStop.getValue()
+            print("y presed lool")
             self.armExtend.set(0.9)
-            if (self.armLength == 0):
-                self.armStopValue1 = self.armStop.getValue()
-            elif (self.armLength == 1 and self.armDirection == 0):
-                self.armExtend.set(0.0)
-            if self.armStopValue1 > ArmStopVar and self.armStopValue1 > self.armStopValue0:
-                self.armDirection = 0 
-            '''
+        if self.controller.getYButtonPressed():
+            self.armExtend.set(0.0)
         if self.controller.getRawButtonPressed(5):
             print("Controller button 5 pressed")
             #temp code to raise arm
@@ -581,7 +573,7 @@ class MyRobot(wpilib.TimedRobot):
 
         self.limelightLensHeightInches = 14
 
-        self.angler = navx.AHRS.create_i2c(wpilib.I2C.Port.kOnboard)
+        #self.angler = navx.AHRS.create_i2c(wpilib.I2C.Port.kOnboard)
 
         self.AutoState = 0
         '''
@@ -604,9 +596,9 @@ class MyRobot(wpilib.TimedRobot):
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        self.displacement = self.navxer.getDisplacementX()
-        self.angle = self.navxer.getAngle()
-        self.yaw = self.navxer.getYaw()
+        #self.displacement = self.navxer.getDisplacementX()
+        #self.angle = self.navxer.getAngle()
+        #self.yaw = self.navxer.getYaw()
 
         self.limelightLensHeightInches = 14
 
@@ -667,6 +659,15 @@ class MyRobot(wpilib.TimedRobot):
             self.driveTrain.arcadeDrive(0, -0.6)
             print("-tx =", self.tx)
         '''
+        '''
+        if (self.AutoSate == 0):
+            self.armUpDown.set(-0.5)
+            event.wait(6)
+            self.armUpDown.set(0.0)
+        '''
+
+
+        #this is an alternate auto that goes to top shelf.
         
         if (self.AutoState == 0):
             self.armUpDown.set(-0.5)
@@ -674,12 +675,12 @@ class MyRobot(wpilib.TimedRobot):
             self.armUpDown.set(0.0)
             self.AutoState = 1
             self.AutoState1Complete = self.timer.get()
-            '''
+            
             if (self.armangle < ArmAngleAutoVar):
                 self.armUpDown.set(0.0)
                 self.AutoState = 1
                 self.AutoState1Complete = self.timer.get()
-            '''
+            
         if (self.AutoState == 1):
             self.AutoState2 = self.timer.get() - self.AutoState1Complete
             if self.AutoState2 < 3.0:
@@ -698,6 +699,7 @@ class MyRobot(wpilib.TimedRobot):
         elif (self.armExtend == 1):
             self.armExtend.set(0.0)
             self.AutoState = 4
+        
 ''' 
         if (abs(self.tx) > 1.0):
             if (self.tx < 0):
