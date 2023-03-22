@@ -33,6 +33,9 @@ autoStop = 3.9
 autoAimLeft = 4
 autoAimRight = -4
 
+autoExtend = 30
+
+
 kp = -0.1
 min_command = 0.05
 steeringAdjust = 0.0
@@ -114,7 +117,9 @@ class MyRobot(wpilib.TimedRobot):
 
         # object that handles basic drive operations
         # Check for the right motor definition (Talon or other)
-        
+        self.flag = 0
+
+        self.AutoState = 0
         '''
         self.frontLeftMotor = wpilib.Talon(0)
         self.rearLeftMotor = wpilib.Talon(1)
@@ -450,7 +455,7 @@ class MyRobot(wpilib.TimedRobot):
             if (self.PadX == -1):
                 self.armExtend.set(0.0)
             elif (self.PadX == 1):
-                self.armExtend.set(0.9)
+                self.armExtend.set(0.9)A
             else:
                 self.armExtend.set(0.0)
         '''
@@ -567,15 +572,14 @@ class MyRobot(wpilib.TimedRobot):
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        self.displacement = self.navxer.getDisplacementX()
-        self.angle = self.navxer.getAngle()
-        self.yaw = self.navxer.getYaw()
+        #self.displacement = self.navxer.getDisplacementX()
+        #self.angle = self.navxer.getAngle()
+        #self.yaw = self.navxer.getYaw()
 
         self.limelightLensHeightInches = 14
 
         #self.angler = navx.AHRS.create_i2c(wpilib.I2C.Port.kOnboard)
 
-        self.AutoState = 0
         '''
         #target distance to dashborard
         self.distance = targetDistance(self.ta)
@@ -583,7 +587,7 @@ class MyRobot(wpilib.TimedRobot):
 
         #target alignment pushing to dashboard
         self.aim = targetAlignment(self.tx)
-        self.sd.putString('tAim', self.aim)
+        self.sd.putString('tAim', self.aim) 
 
         #arm extension to dashboard
         self.reach = armExtension(self.distance)
@@ -596,11 +600,14 @@ class MyRobot(wpilib.TimedRobot):
         self.ty = self.lmtable.getNumber('ty', None)
         self.ta = self.lmtable.getNumber('ta', None)
         self.ts = self.lmtable.getNumber('ts', None)
-        #self.displacement = self.navxer.getDisplacementX()
-        #self.angle = self.navxer.getAngle()
-        #self.yaw = self.navxer.getYaw()
 
         self.limelightLensHeightInches = 14
+
+        #flag for auto state
+        self.AutoState = 0
+
+        #flag for getting shelf angle
+        self.AngleState = 0
 
         #target distance to dashborard
         self.distance = targetDistance(self.ta)
@@ -609,12 +616,13 @@ class MyRobot(wpilib.TimedRobot):
         #set limelight to april tag mode
         self.lmtable.putNumber('pipeline', 0)
 
-        #self.armangle = self.angler.getAngle()
+        #get arm postiono using navx
+        self.armangle = self.angler.getAngle()
 
         #get arm postion using encoder
-        self.armangle = self.armUpDown.getSelectedSensorPosition(0)
+        #self.armangle = self.armUpDown.getSelectedSensorPosition(0)
 
-        self.armStop = wpilib.AnalogInput(1)
+        #self.armStop = wpilib.AnalogInput(1)
        
         """This function is called periodically during autonomous."""
         '''
@@ -628,7 +636,7 @@ class MyRobot(wpilib.TimedRobot):
         '''
         i = 0
         if i==0:
-            print("In Autonomous Mode")
+            #print("In Autonomous Mode")
             i=i+1
         #self.driveTrain.arcadeDrive(-0.5, 0)
         #time.sleep(0.5)
@@ -668,38 +676,51 @@ class MyRobot(wpilib.TimedRobot):
 
 
         #this is an alternate auto that goes to top shelf.
+        # to get the desired angle for shelf using navx
+        if (self.flag == 0):
+            self.armAutoAngle = self.armangle + autoExtend
+            self.flag = 1
+
+
         
         if (self.AutoState == 0):
-            self.armUpDown.set(-0.5)
-            event.wait(2)
-            self.armUpDown.set(0.0)
-            self.AutoState = 1
-            self.AutoState1Complete = self.timer.get()
-            
+            print("Autostate = 0")
+            print("autoArmAngle = ", self.armAutoAngle)
+            print("Navx = ", self.armangle)
+            self.armUpDown.set(0.7)
+            self.armangle = self.angler.getAngle()
+            if (self.armangle > self.armAutoAngle):
+                print("auto extend arm angle")
+                self.armUpDown.set(0.0)
+                self.AutoState = 1
+                #self.AutoState1Complete = self.timer.get()
+            '''
             if (self.armangle < ArmAngleAutoVar):
                 self.armUpDown.set(0.0)
                 self.AutoState = 1
                 self.AutoState1Complete = self.timer.get()
-            
+            '''   
         if (self.AutoState == 1):
-            self.AutoState2 = self.timer.get() - self.AutoState1Complete
-            if self.AutoState2 < 3.0:
-                self.armExtend.set(0.5)
-            else:
-                self.armExtend.set(0.0)
-                self.AutoState2Complete = self.timer.get()
+            print("Autostate = 1")
+            self.armExtend(0.7)
+            self.armStopValue = self.armStop.getValue()
+            if (self.armStopValue < 545):
+                self.armExtend(0.0)
                 self.AutoState = 2
         if (self.AutoState == 2):
+            print("Autostate = 2")
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
             event.wait(1)
             self.doubleSolenoid.set(wpilib.DoubleSolenoid.Value.kForward)
             self.AutoState = 3
         if (self.AutoState == 3):
+            print("Autostate = 3")
             self.armExtend.set(-0.5)
-        elif (self.armExtend == 1):
-            self.armExtend.set(0.0)
-            self.AutoState = 4
-        
+            self.armStopValue = self.armStop.getValue()
+            if (self.armStopValue > 600):
+                self.armExtend.set(0.0)
+                self.AutoState = 4
+        '''
 ''' 
         if (abs(self.tx) > 1.0):
             if (self.tx < 0):
@@ -707,7 +728,7 @@ class MyRobot(wpilib.TimedRobot):
             else:
                 steeringAdjust = kp * self.tx - min_command
             print("steering adj = ", steeringAdjust)
-'''        
+        
 
 '''
     def teleopPeriodic(self):
